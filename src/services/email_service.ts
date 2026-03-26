@@ -13,11 +13,39 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendOTPEmail = async (email: string, otp: string) => {
+  const html = `
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
+      <body style="margin: 0; padding: 0; background: #f4f7fb;">
+        <div style="text-align:center; padding: 16px; background:#f4f7fb;">
+          <img src="https://res.cloudinary.com/dff3zapap/image/upload/v1774457991/v10mmllxj1qs76g9ztlu.jpg" width="60" style="border-radius:10px;" />
+          <h2 style="margin:8px 0 0; font-size:16px; color:#0f172a;">
+            Institute of Knowledge
+          </h2>
+        </div>
+
+        <div style="max-width: 520px; margin: 0 auto 24px; background: #ffffff; border: 1px solid #dbe4f0; border-radius: 12px; overflow: hidden; font-family: 'Segoe UI', Tahoma, Arial, sans-serif;">
+          <div style="background: linear-gradient(135deg, #0f4c81 0%, #1d7fa6 100%); color: #ffffff; padding: 16px 20px;">
+            <h3 style="margin: 0; font-size: 18px;">Your Verification Code</h3>
+          </div>
+          <div style="padding: 20px; color: #0f172a;">
+            <p style="margin: 0 0 10px; font-size: 14px;">Use the OTP below to continue:</p>
+            <p style="margin: 0 0 12px; font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #0f4c81;">${otp}</p>
+            <p style="margin: 0; font-size: 13px; color: #334155;">This OTP expires in 10 minutes.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
   await transporter.sendMail({
     from: '"INSTITUTE OF KNOWLEDGE" <noreply@myapp.com>',
     to: email,
     subject: "Your Verification Code",
     text: `Your OTP is ${otp}. It expires in 10 minutes.`,
+    html,
   });
 };
 
@@ -108,7 +136,7 @@ export const sendAttendanceCompleteEmail = async (input: AttendanceCompleteEmail
   <img src="https://res.cloudinary.com/dff3zapap/image/upload/v1774457991/v10mmllxj1qs76g9ztlu.jpg" width="60" style="border-radius:10px;" />
   <h2 style="margin:8px 0 0; font-size:16px; color:#0f172a;">
     Institute of Knowledge
-  </h2>
+  </h2> 
 </div>
     
   <div class="outer-wrap" style="font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f7fb; padding: 24px; color: #0f172a;">
