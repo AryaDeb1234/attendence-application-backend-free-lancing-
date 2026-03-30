@@ -1,7 +1,7 @@
 import Attendence from "../models/Attendence";
 import { IAttendence } from "../models/Attendence";
 import Batch from "../models/Batch";
-import Class, { Iclass } from "../models/class";
+import Class, { Iclass } from "../models/Class";
 import MainClass from "../models/MainClass";
 import Student_Batch from "../models/Student_Batch";
 import User from "../models/User";

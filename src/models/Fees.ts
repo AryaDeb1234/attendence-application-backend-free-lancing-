@@ -9,7 +9,7 @@ export interface IFees {
     // lateDays: number;
     // lateFineperDay: number;
     totalAmount: number;
-    PaidAt: Date;
+    PaidAt?: Date;
 }
 
 const feesSchema = new mongoose.Schema<IFees>(
@@ -22,7 +22,7 @@ const feesSchema = new mongoose.Schema<IFees>(
         // lateDays: { type: Number, default: 0 },
         // lateFineperDay: { type: Number, default: 0 },
         totalAmount: { type: Number, required: true },
-        PaidAt: { type: Date, required: true },
+        PaidAt: { type: Date, required: false },
     },
     {
         timestamps: true,

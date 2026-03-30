@@ -203,3 +203,86 @@ export const sendAttendanceCompleteEmail = async (input: AttendanceCompleteEmail
     html,
   });
 };
+
+interface FeesReminderEmailInput {
+  studentName: string;
+  studentEmail: string;
+  className: string;
+  monthString: string;
+  feesAmount: number;
+  teacherName: string;
+  teacherEmail: string;
+}
+
+export const sendFeesReminderEmail = async (input: FeesReminderEmailInput) => {
+  const { studentName, studentEmail, className, monthString, feesAmount, teacherName, teacherEmail } = input;
+
+  const html = `
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
+      <body style="margin: 0; padding: 0; background: #f4f7fb; font-family: 'Segoe UI', Tahoma, Arial, sans-serif;">
+        <div style="text-align:center; padding: 16px; background:#f4f7fb;">
+          <img src="https://res.cloudinary.com/dff3zapap/image/upload/v1774457991/v10mmllxj1qs76g9ztlu.jpg" width="60" style="border-radius:10px;" />
+          <h2 style="margin:8px 0 0; font-size:16px; color:#0f172a;">
+            Institute of Knowledge
+          </h2>
+        </div>
+
+        <div style="max-width: 520px; margin: 0 auto 24px; background: #ffffff; border: 1px solid #dbe4f0; border-radius: 12px; overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #0f4c81 0%, #1d7fa6 100%); color: #ffffff; padding: 18px 20px;">
+            <h3 style="margin: 0; font-size: 18px;">📋 Fee Payment Reminder</h3>
+            <p style="margin: 4px 0 0; font-size: 13px; opacity: 0.95;">Your monthly fees are due</p>
+          </div>
+          
+          <div style="padding: 24px 20px; color: #0f172a;">
+            <p style="margin: 0 0 16px; font-size: 15px;">Hello <strong>${studentName}</strong>,</p>
+            
+            <div style="background: #f0f4f9; border-left: 4px solid #0f4c81; padding: 14px; margin-bottom: 16px; border-radius: 4px;">
+              <p style="margin: 0; font-size: 13px; color: #334155;">This is a friendly reminder that your fees for <strong>${monthString}</strong> are due.</p>
+            </div>
+
+            <div style="background: #ecfdf3; border-left: 4px solid #16a34a; padding: 14px; margin-bottom: 18px; border-radius: 4px;">
+              <p style="margin: 0; font-size: 12px; color: #166534; text-transform: uppercase; letter-spacing: 0.5px;">Fee Details</p>
+              <p style="margin: 8px 0 0; font-size: 14px; color: #14532d;">
+                <strong style="font-size: 16px; display: block; margin-bottom: 4px;">Rs. ${feesAmount}</strong>
+                for <strong>${className}</strong> - <strong>${monthString}</strong>
+              </p>
+            </div>
+
+            <p style="margin: 0 0 16px; font-size: 14px; color: #334155;">
+              Please pay your fees as soon as possible to avoid any late charges. If you have already paid, please disregard this email.
+            </p>
+
+            <div style="margin: 20px 0; padding: 14px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
+              <p style="margin: 0 0 8px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Class Information</p>
+              <p style="margin: 4px 0; font-size: 13px; color: #0f172a;"><strong>Class:</strong> ${className}</p>
+              <p style="margin: 4px 0; font-size: 13px; color: #0f172a;"><strong>Month:</strong> ${monthString}</p>
+              <p style="margin: 4px 0; font-size: 13px; color: #0f172a;"><strong>Teacher:</strong> ${teacherName}</p>
+              <p style="margin: 4px 0; font-size: 13px; color: #0f172a;"><strong>Contact:</strong> <a href="mailto:${teacherEmail}" style="color: #0f4c81; text-decoration: none;">${teacherEmail}</a></p>
+            </div>
+
+            <p style="margin: 18px 0 0; font-size: 12px; color: #6b7280;">
+              If you have any queries regarding your fees, please contact your instructor.
+            </p>
+          </div>
+
+          <div style="background: #f9fafb; padding: 14px 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+            <p style="margin: 0; font-size: 11px; color: #6b7280;">
+              Institute of Knowledge &copy; 2026 | All Rights Reserved
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  await transporter.sendMail({
+    from: '"INSTITUTE OF KNOWLEDGE" <noreply@myapp.com>',
+    to: studentEmail,
+    subject: `Fee Reminder for ${className} - ${monthString}`,
+    text: `Hello ${studentName},\n\nThis is a friendly reminder that your fees for ${monthString} are due.\n\nClass: ${className}\nFees Amount: Rs. ${feesAmount}\nMonth: ${monthString}\nTeacher: ${teacherName} (${teacherEmail})\n\nPlease pay your fees as soon as possible.\n\nThank you!`,
+    html,
+  });
+};

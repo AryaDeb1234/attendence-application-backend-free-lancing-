@@ -8,6 +8,6 @@ router.get("/details/:mainClassId/:studentId", protect, feesController.getFeesBy
 router.post("/pay/:mainClassId/:studentId", protect, feesController.recordStudentFeesPaid);
 router.patch("/edit/:feesId", protect, feesController.editFeesById);
 router.get("/history/:mainClassId/:studentId", protect, feesController.getStudentFeesHistory);
-
+router.post("/trigger-reminder", protect, feesController.triggerFeesReminder);
 
 export default router;

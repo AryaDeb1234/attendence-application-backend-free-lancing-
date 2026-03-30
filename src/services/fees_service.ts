@@ -174,12 +174,13 @@ export const getFeesByMainClassStudent = async (mainClassId: string, studentId: 
     );
     const calculatedCourseEndDate = new Date(mainClass.startDate);
     calculatedCourseEndDate.setMonth(calculatedCourseEndDate.getMonth() + durationInMonths);
-    const paidMonthLabels = [...feeHistory]
-        .sort((a, b) => new Date(a.PaidAt).getTime() - new Date(b.PaidAt).getTime())
+    const paidFeesHistory = feeHistory.filter((record) => Boolean(record.PaidAt));
+    const paidMonthLabels = [...paidFeesHistory]
+        .sort((a, b) => new Date(a.PaidAt as Date).getTime() - new Date(b.PaidAt as Date).getTime())
         .map((record) => record.month);
     const { paidMonths, pendingMonths } = reconcilePaidMonthsWithDueMonths(dueMonths, paidMonthLabels);
     const nextDueMonth = pendingMonths.length > 0 ? pendingMonths[0] : null;
-    const totalPaidAmount = feeHistory.reduce((sum, record) => sum + (record.totalAmount || 0), 0);
+    const totalPaidAmount = paidFeesHistory.reduce((sum, record) => sum + (record.totalAmount || 0), 0);
     const totalDueAmount = mainClass.fees * dueMonths.length;
     const pendingAmount = Math.max(totalDueAmount - totalPaidAmount, 0);
     const overpaidAmount = Math.max(totalPaidAmount - totalDueAmount, 0);
@@ -238,16 +239,27 @@ export const recordStudentFeesPaid = async (input: RecordFeesInput): Promise<IFe
     const safeAmount = amountPaid ?? mainClass.fees;
     const monthString = month ?? getMonthString(new Date());
     
-    const feesRecord = await Fees.create({
-        mainClass: mainClass._id,
-        student: resolvedStudent.student._id,
-        month: monthString,
-        baseamount: mainClass.fees,
-        totalAmount: safeAmount,
-        PaidAt: paidAt ?? new Date(),
-    });
+    const feesRecord = await Fees.findOneAndUpdate(
+        {
+            mainClass: mainClass._id,
+            student: resolvedStudent.student._id,
+            month: monthString,
+        },
+        {
+            $set: {
+                baseamount: mainClass.fees,
+                totalAmount: safeAmount,
+                PaidAt: paidAt ?? new Date(),
+            },
+        },
+        {
+            new: true,
+            upsert: true,
+            setDefaultsOnInsert: true,
+        },
+    );
 
-    return feesRecord;
+    return feesRecord as IFees;
 };
 
 export const getStudentFeesHistory = async (mainClassId: string, studentId: string): Promise<IFees[]> => {

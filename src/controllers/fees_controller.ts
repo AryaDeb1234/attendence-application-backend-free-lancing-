@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as feesService from "../services/fees_service";
+import { triggerFeesReminderManually } from "../services/fees_cron_service";
 import { IFees } from "../models/Fees";
 
 type RecordStudentFeesBody = Partial<Pick<IFees, "student" | "totalAmount" | "PaidAt" | "month">> & {
@@ -131,6 +132,35 @@ export const editFeesById = async (req: Request, res: Response) => {
                     : status === 400
                         ? (error as Error).message
                         : "Error updating fees record",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+};
+
+export const triggerFeesReminder = async (req: Request, res: Response) => {
+    try {
+        // Only allow Admin to trigger manual fee reminders
+        if (!req.user || req.user.role !== "Admin") {
+            return res.status(403).json({ message: "Access denied. Admin privileges required." });
+        }
+
+        const result = await triggerFeesReminderManually();
+
+        if (result.success) {
+            return res.status(200).json({
+                message: "Fee reminders triggered successfully",
+                result,
+            });
+        } else {
+            return res.status(500).json({
+                message: "Error triggering fee reminders",
+                result,
+            });
+        }
+    } catch (error) {
+        const status = (error as any)?.status || 500;
+        return res.status(status).json({
+            message: "Error triggering fee reminders",
             error: error instanceof Error ? error.message : String(error),
         });
     }
