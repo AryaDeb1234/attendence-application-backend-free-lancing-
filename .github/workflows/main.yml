@@ -30,7 +30,3 @@ jobs:
             aryadeb1234/attendence-app:latest
             aryadeb1234/attendence-app:v${{ github.run_number }}
 
-      # 4. Trigger Deployment (Railway)
-      - name: Trigger Deployment
-        run: |
-          curl -X POST ${{ secrets.RAILWAY_DEPLOY_HOOK }}
