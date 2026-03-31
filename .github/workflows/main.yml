@@ -29,3 +29,9 @@ jobs:
             aryadeb1234/attendence-app:latest
             aryadeb1234/attendence-app:v${{ github.run_number }}
 
+      - name: Deploy to Railway
+        run: |
+         npm install -g @railway/cli
+         railway up --service attendence-app
+        env:
+         RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
