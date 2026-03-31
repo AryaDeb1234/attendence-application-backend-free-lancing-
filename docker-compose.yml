@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   backend:
-    image: aryadeb1234/attendence-app:v1.1
+    image: aryadeb1234/attendence-app:latest
     container_name: backend
     ports:
       - "3000:3000"
