@@ -1,5 +1,4 @@
 name: 🚀 Docker CI/CD - Attendence App
-
 on:
   push:
     branches: ["main"]
