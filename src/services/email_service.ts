@@ -1,19 +1,22 @@
-import nodemailer from 'nodemailer';
+// import nodemailer from 'nodemailer';
+// 
+// const transporter = nodemailer.createTransport({
+//   host: "smtp.gmail.com",
+//   port: 587,
+//   secure: false, // TLS
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASS,
+//   },
+//   tls: {
+//     rejectUnauthorized: false,
+//   },
+//   connectionTimeout: 15000,
+// });
 
+import { Resend } from 'resend';
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // TLS
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-  connectionTimeout: 15000,
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendOTPEmail = async (email: string, otp: string) => {
   const html = `
@@ -43,11 +46,10 @@ export const sendOTPEmail = async (email: string, otp: string) => {
     </html>
   `;
 
-  await transporter.sendMail({
-    from: '"INSTITUTE OF KNOWLEDGE" <noreply@myapp.com>',
+  await resend.emails.send({
+    from: "onboarding@resend.dev",
     to: email,
     subject: "Your Verification Code",
-    text: `Your OTP is ${otp}. It expires in 10 minutes.`,
     html,
   });
 };
@@ -192,17 +194,10 @@ export const sendAttendanceCompleteEmail = async (input: AttendanceCompleteEmail
     </html>
   `;
 
-  await transporter.sendMail({
-    from: '"INSTITUTE OF KNOWLEDGE" <noreply@myapp.com>',
+  await resend.emails.send({
+    from: "onboarding@resend.dev",
     to: adminEmails.join(","),
     subject: `Attendance Complete - ${batchName} (${formattedDate})`,
-    text:
-      `Batch: ${batchName}\n` +
-      `Date: ${formattedDate}\n` +
-      `Present Count: ${presentCount}\n` +
-      `Absent Count: ${absentCount}\n\n` +
-      `Present Students:\n${presentLines}\n\n` +
-      `Absent Students:\n${absentLines}`,
     html,
   });
 };
@@ -281,11 +276,10 @@ export const sendFeesReminderEmail = async (input: FeesReminderEmailInput) => {
     </html>
   `;
 
-  await transporter.sendMail({
-    from: '"INSTITUTE OF KNOWLEDGE" <noreply@myapp.com>',
+  await resend.emails.send({
+    from: "onboarding@resend.dev",
     to: studentEmail,
     subject: `Fee Reminder for ${className} - ${monthString}`,
-    text: `Hello ${studentName},\n\nThis is a friendly reminder that your fees for ${monthString} are due.\n\nClass: ${className}\nFees Amount: Rs. ${feesAmount}\nMonth: ${monthString}\nTeacher: ${teacherName} (${teacherEmail})\n\nPlease pay your fees as soon as possible.\n\nThank you!`,
     html,
   });
 };
