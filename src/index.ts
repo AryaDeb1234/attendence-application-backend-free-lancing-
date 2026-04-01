@@ -20,8 +20,7 @@ const app = express();
 
 app.use(cors({
   origin: [
-    "http://localhost:3000",           
-     "https://code-sphere-code.vercel.app" 
+    "http://localhost:3000"
   ],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
