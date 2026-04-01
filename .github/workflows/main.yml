@@ -1,5 +1,4 @@
 name: 🚀 Docker CI/CD - Attendence App
-
 on:
   push:
     branches: ["main"]
@@ -29,8 +28,3 @@ jobs:
           tags: |
             aryadeb1234/attendence-app:latest
             aryadeb1234/attendence-app:v${{ github.run_number }}
-
-      # 4. Trigger Deployment (Railway)
-      - name: Trigger Deployment
-        run: |
-          curl -X POST ${{ secrets.RAILWAY_DEPLOY_HOOK }}
