@@ -25,7 +25,8 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.1",
     "passport": "^0.7.0",
-    "resend": "^6.10.0"
+    "resend": "^6.10.0",
+    "sib-api-v3-sdk": "^8.5.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

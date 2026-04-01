@@ -14,9 +14,54 @@
 //   connectionTimeout: 15000,
 // });
 
-import { Resend } from 'resend';
+// import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// const resend = new Resend(process.env.RESEND_API_KEY);
+
+// const sendEmailViaResend = async (payload: {
+//   from: string;
+//   to: string | string[];
+//   subject: string;
+//   html: string;
+// }) => {
+//   const { data, error } = await resend.emails.send(payload);
+
+//   if (error) {
+//     throw new Error(`Email sending failed: ${error.message}`);
+//   }
+
+//   return data;
+// };
+import SibApiV3Sdk from 'sib-api-v3-sdk';
+
+const client = SibApiV3Sdk.ApiClient.instance;
+
+if (!process.env.BREVO_API_KEY) {   
+  throw new Error('BREVO_API_KEY is missing in environment variables');
+}
+
+client.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER;
+const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'Attendance App';
+
+const sendEmailViaBrevo = async ({ to, subject, html }: { to: string | string[]; subject: string; html: string }) => {
+  const recipients = (Array.isArray(to) ? to : [to])
+    .map((email) => email?.trim())
+    .filter((email): email is string => Boolean(email));
+
+  if (!recipients.length) {
+    throw new Error('No recipient email provided');
+  }
+
+  await apiInstance.sendTransacEmail({
+    sender: { email: BREVO_SENDER_EMAIL, name: BREVO_SENDER_NAME },
+    to: recipients.map((email) => ({ email })),
+    subject,
+    htmlContent: html,
+  });
+};
 
 export const sendOTPEmail = async (email: string, otp: string) => {
   const html = `
@@ -46,8 +91,7 @@ export const sendOTPEmail = async (email: string, otp: string) => {
     </html>
   `;
 
-  await resend.emails.send({
-    from: "onboarding@resend.dev",
+  await sendEmailViaBrevo({
     to: email,
     subject: "Your Verification Code",
     html,
@@ -194,9 +238,8 @@ export const sendAttendanceCompleteEmail = async (input: AttendanceCompleteEmail
     </html>
   `;
 
-  await resend.emails.send({
-    from: "onboarding@resend.dev",
-    to: adminEmails.join(","),
+  await sendEmailViaBrevo({
+    to: adminEmails,
     subject: `Attendance Complete - ${batchName} (${formattedDate})`,
     html,
   });
@@ -276,8 +319,7 @@ export const sendFeesReminderEmail = async (input: FeesReminderEmailInput) => {
     </html>
   `;
 
-  await resend.emails.send({
-    from: "onboarding@resend.dev",
+  await sendEmailViaBrevo({
     to: studentEmail,
     subject: `Fee Reminder for ${className} - ${monthString}`,
     html,
