@@ -25,5 +25,6 @@ router.patch(
 	]),
 	userController.editInstituteUser,
 );
+router.delete("/delete/:userId", protect, userController.deleteInstituteUser);
 router.get("/details/:userId", protect, userController.userDetails);
 export default router;

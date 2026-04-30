@@ -172,6 +172,30 @@ export const editInstituteUser = async (req: Request, res: Response) => {
   }
 };
 
+export const deleteInstituteUser = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== "Admin") {
+      return res.status(403).json({ message: "Access denied. Admin privileges required." });
+    }
+
+    const userId = req.params.userId;
+    const deletedUser = await UserService.deleteInstituteUserById(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+      data: deletedUser,
+    });
+  } catch (error) {
+    const status = (error as any)?.status || 500;
+    return res.status(status).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Error deleting user",
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+};
+
 export const getAllStudents = async (req: Request, res: Response) => {
   try {
     if (!req.user || (req.user.role !== "Admin" && req.user.role !== "Teacher")) {

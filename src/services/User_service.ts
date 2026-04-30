@@ -172,6 +172,17 @@ export const updateInstituteUserById = async (userId: string, updateData: Update
     return user;
 };
 
+export const deleteInstituteUserById = async (userId: string): Promise<IUser> => {
+    const deletedUser = await User.findByIdAndDelete(userId);
+    if (!deletedUser) {
+        const err = new Error("User not found");
+        (err as any).status = 404;
+        throw err;
+    }
+
+    return deletedUser;
+};
+
 export const getAllStudents = async (): Promise<IUser[]> => {
     return await User.find({ role: "Student" })
         .populate("batches", "name weekday startTime endTime")
