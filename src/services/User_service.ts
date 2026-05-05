@@ -8,6 +8,19 @@ interface CreateInstituteUserInput {
     email?: string;
     phone?: string;
     adhar?: string;
+    fatherName?: string;
+    dob?: string | Date;
+    address?: string;
+    nationality?: string;
+    gender?: 'Male' | 'Female' | 'Other';
+    pin?: string;
+    schoolCollegeName?: string;
+    stream?: string;
+    className?: string;
+    'class'?: string;
+    yearOfPassing?: string | number;
+    marksObtained?: string | number;
+    grade?: string;
     role?: string;
     mainClasses?: string[];
     profilePic?: string;
@@ -19,11 +32,81 @@ interface UpdateInstituteUserInput {
     email?: string;
     phone?: string;
     adhar?: string;
+    fatherName?: string;
+    dob?: string | Date;
+    address?: string;
+    nationality?: string;
+    gender?: 'Male' | 'Female' | 'Other';
+    pin?: string;
+    schoolCollegeName?: string;
+    stream?: string;
+    className?: string;
+    'class'?: string;
+    yearOfPassing?: string | number;
+    marksObtained?: string | number;
+    grade?: string;
     role?: string;
     mainClasses?: string[];
     profilePic?: string;
     documents?: string[];
 }
+
+const parseOptionalDate = (value: string | Date | undefined) => {
+    if (value === undefined || value === null || value === "") {
+        return undefined;
+    }
+
+    return value instanceof Date ? value : new Date(value);
+};
+
+const parseOptionalNumber = (value: string | number | undefined) => {
+    if (value === undefined || value === null || value === "") {
+        return undefined;
+    }
+
+    return typeof value === "number" ? value : Number(value);
+};
+
+const validateParsedDate = (value: Date | undefined, fieldName: string) => {
+    if (value && Number.isNaN(value.getTime())) {
+        const err = new Error(`${fieldName} must be a valid date`);
+        (err as any).status = 400;
+        throw err;
+    }
+};
+
+const validateParsedNumber = (value: number | undefined, fieldName: string) => {
+    if (value !== undefined && Number.isNaN(value)) {
+        const err = new Error(`${fieldName} must be a valid number`);
+        (err as any).status = 400;
+        throw err;
+    }
+};
+
+const buildUserProfileData = <T extends CreateInstituteUserInput | UpdateInstituteUserInput>(userData: T) => ({
+    fatherName: userData.fatherName,
+    dob: parseOptionalDate(userData.dob),
+    address: userData.address,
+    nationality: userData.nationality,
+    gender: userData.gender,
+    pin: userData.pin,
+    schoolCollegeName: userData.schoolCollegeName,
+    stream: userData.stream,
+    className: userData.className ?? userData["class"],
+    yearOfPassing: parseOptionalNumber(userData.yearOfPassing),
+    marksObtained: parseOptionalNumber(userData.marksObtained),
+    grade: userData.grade,
+});
+
+const validateUserProfileData = <T extends CreateInstituteUserInput | UpdateInstituteUserInput>(userData: T) => {
+    const dob = parseOptionalDate(userData.dob);
+    const yearOfPassing = parseOptionalNumber(userData.yearOfPassing);
+    const marksObtained = parseOptionalNumber(userData.marksObtained);
+
+    validateParsedDate(dob, "dob");
+    validateParsedNumber(yearOfPassing, "yearOfPassing");
+    validateParsedNumber(marksObtained, "marksObtained");
+};
 
 
 export const loginUser = async (email: string) => {
@@ -74,6 +157,10 @@ export const createInstituteUser = async (userData: CreateInstituteUserInput): P
         throw err;
     }
 
+    if (role === "Student") {
+        validateUserProfileData(userData);
+    }
+
     const existingUser = await User.findOne({ email: userData.email.toLowerCase() });
     if (existingUser) {
         const err = new Error("User already exists with this email");
@@ -91,6 +178,7 @@ export const createInstituteUser = async (userData: CreateInstituteUserInput): P
         role,
         batches: [],
         mainClasses: userData.mainClasses ?? [],
+        ...(role === "Student" ? buildUserProfileData(userData) : {}),
     });
 
     return newUser;
@@ -158,6 +246,22 @@ export const updateInstituteUserById = async (userId: string, updateData: Update
     if (updateData.mainClasses !== undefined) user.mainClasses = updateData.mainClasses as any;
     if (updateData.profilePic !== undefined) user.profilePic = updateData.profilePic;
     if (updateData.role !== undefined) user.role = nextRole;
+    if (updateData.fatherName !== undefined) user.fatherName = updateData.fatherName;
+    if (updateData.dob !== undefined) user.dob = parseOptionalDate(updateData.dob) as any;
+    if (updateData.address !== undefined) user.address = updateData.address;
+    if (updateData.nationality !== undefined) user.nationality = updateData.nationality;
+    if (updateData.gender !== undefined) user.gender = updateData.gender;
+    if (updateData.pin !== undefined) user.pin = updateData.pin;
+    if (updateData.schoolCollegeName !== undefined) user.schoolCollegeName = updateData.schoolCollegeName;
+    if (updateData.stream !== undefined) user.stream = updateData.stream;
+    if (updateData.className !== undefined || updateData["class"] !== undefined) user.className = updateData.className ?? updateData["class"];
+    if (updateData.yearOfPassing !== undefined) user.yearOfPassing = parseOptionalNumber(updateData.yearOfPassing) as any;
+    if (updateData.marksObtained !== undefined) user.marksObtained = parseOptionalNumber(updateData.marksObtained) as any;
+    if (updateData.grade !== undefined) user.grade = updateData.grade;
+
+    if (nextRole === "Student") {
+        validateUserProfileData(updateData);
+    }
 
     if (nextRole === "Student") {
         if (updateData.documents !== undefined) {
@@ -166,6 +270,18 @@ export const updateInstituteUserById = async (userId: string, updateData: Update
     } else {
         user.documents = [];
         user.adhar = "";
+        user.fatherName = undefined;
+        user.dob = undefined;
+        user.address = undefined;
+        user.nationality = undefined;
+        user.gender = undefined;
+        user.pin = undefined;
+        user.schoolCollegeName = undefined;
+        user.stream = undefined;
+        user.className = undefined;
+        user.yearOfPassing = undefined;
+        user.marksObtained = undefined;
+        user.grade = undefined;
     }
 
     await user.save();
