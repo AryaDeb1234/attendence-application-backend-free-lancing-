@@ -21,7 +21,9 @@ export const createClass = async (req: Request, res: Response) => {
         res.status(201).json(newClass);
     } catch (error) {
         const status = (error as any)?.status === 400 ? 400 : 500;
-        const message = (error as any)?.status === 400 ? "Invalid class data" : "Error creating class";
+        const message = (error as any)?.status === 400
+            ? (error instanceof Error ? error.message : "Invalid class data")
+            : "Error creating class";
         res.status(status).json({ message,  error: error instanceof Error ? error.message : String(error) });
     }
 };
@@ -52,7 +54,11 @@ export const editClass = async (req: Request, res: Response) => {
         res.status(200).json(updatedClass);
     }catch (error) {
         const status = (error as any)?.status === 404 ? 404 : (error as any)?.status === 400 ? 400 : 500;
-        const message = (error as any)?.status === 404 ? "Class not found" : (error as any)?.status === 400 ? "Invalid class data" : "Error updating class";
+        const message = (error as any)?.status === 404
+            ? "Class not found"
+            : (error as any)?.status === 400
+                ? (error instanceof Error ? error.message : "Invalid class data")
+                : "Error updating class";
         res.status(status).json({ message, error: error instanceof Error ? error.message : String(error) });
     }
 };
@@ -118,7 +124,7 @@ export const addStudentToClass = async (req: Request, res: Response) => {
     } catch (error) {
         const status = [400, 403, 404].includes((error as any)?.status) ? (error as any).status : 500;
         const message = status === 400
-            ? "Invalid request data"
+            ? (error instanceof Error ? error.message : "Invalid request data")
             : status === 403
                 ? "Access denied"
                 : status === 404

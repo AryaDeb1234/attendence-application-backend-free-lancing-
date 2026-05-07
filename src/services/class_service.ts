@@ -3,6 +3,25 @@ import MainClass from "../models/MainClass";
 import User from "../models/User";
 import { Types } from "mongoose";
 
+const formatStudentLabel = (student: { name?: string; email?: string } | null | undefined): string => {
+    if (!student) {
+        return "Unknown student";
+    }
+
+    const name = student.name?.trim();
+    const email = student.email?.trim();
+
+    if (name && email) {
+        return `${name} (${email})`;
+    }
+
+    return name || email || "Unknown student";
+};
+
+const formatMainClassLabel = (mainClass: { name?: string } | null | undefined): string => {
+    return mainClass?.name?.trim() ? `main class ${mainClass.name.trim()}` : "unknown main class";
+};
+
 const parseTimeToMinutes = (value: string): number => {
     const [hours, minutes] = value.split(":").map(Number);
     return (hours * 60) + minutes;
@@ -53,14 +72,14 @@ const validatePairAssignments = async (
         throw err;
     }
 
-    const validStudents = await User.find({ _id: { $in: studentIds }, role: "Student" }).select("_id");
+    const validStudents = await User.find({ _id: { $in: studentIds }, role: "Student" }).select("_id name email");
     if (validStudents.length !== studentIds.length) {
         const err = new Error("One or more students are invalid or not registered as Student");
         (err as any).status = 400;
         throw err;
     }
 
-    const mainClassDocs = await MainClass.find({ _id: { $in: mainClassIds } }).select("_id students");
+    const mainClassDocs = await MainClass.find({ _id: { $in: mainClassIds } }).select("_id name students");
     if (mainClassDocs.length !== mainClassIds.length) {
         const err = new Error("One or more mainClasses are invalid");
         (err as any).status = 400;
@@ -91,8 +110,10 @@ const validatePairAssignments = async (
         );
 
         if (!isStudentInMainClass) {
+            const studentDoc = validStudents.find((doc) => doc._id.toString() === studentId);
+            const mainClassDoc = mainClassDocs.find((doc) => doc._id.toString() === mainClassId);
             const err = new Error(
-                `student ${studentId} is not enrolled in mainClass ${mainClassId}; add the student to that main class first`,
+                `${formatStudentLabel(studentDoc)} is not enrolled in ${formatMainClassLabel(mainClassDoc)}; add the student to that main class first`,
             );
             (err as any).status = 400;
             throw err;
