@@ -56,6 +56,8 @@ or
 - [GET /mainclass](#route-mainclass-list)
 - [GET /mainclass/show/:id](#route-mainclass-show)
 - [POST /mainclass/create](#route-mainclass-create)
+- [PATCH /mainclass/edit/:id](#route-mainclass-edit)
+- [DELETE /mainclass/delete/:id](#route-mainclass-delete)
 - [POST /mainclass/add-student](#route-mainclass-add-student)
 - [DELETE /mainclass/remove-student](#route-mainclass-remove-student)
 - [PATCH /mainclass/:studentBatchId](#route-mainclass-patch-studentbatch)
@@ -323,11 +325,13 @@ What it does:
 - Creates main class.
 - `endDate` is auto-calculated from `startDate + duration` (months).
 
+<a id="route-mainclass-edit"></a>
 ### PATCH `/mainclass/edit/:id` (Admin)
 What it does:
 - Updates an existing main class.
 - Recalculates `endDate` if `startDate` or `duration` changes.
 
+<a id="route-mainclass-delete"></a>
 ### DELETE `/mainclass/delete/:id` (Admin)
 What it does:
 - Deletes a main class.
