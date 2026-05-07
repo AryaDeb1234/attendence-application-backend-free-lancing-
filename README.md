@@ -323,6 +323,16 @@ What it does:
 - Creates main class.
 - `endDate` is auto-calculated from `startDate + duration` (months).
 
+### PATCH `/mainclass/edit/:id` (Admin)
+What it does:
+- Updates an existing main class.
+- Recalculates `endDate` if `startDate` or `duration` changes.
+
+### DELETE `/mainclass/delete/:id` (Admin)
+What it does:
+- Deletes a main class.
+- Removes related references from `User.mainClasses`, `Batch.mainClasses`, and `Student_Batch` records.
+
 Request:
 ```json
 {

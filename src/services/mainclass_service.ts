@@ -1,6 +1,7 @@
 import MainClass, { ICreateMainClassInput, IMainClass } from "../models/MainClass";
 import User, { IUser } from "../models/User";
 import Student_Batch, { I_S_Batch } from "../models/Student_Batch";
+import Batch from "../models/Batch";
 
 export const createMainClass = async (mainClassData: ICreateMainClassInput): Promise<IMainClass> => {
   const startDate = new Date(mainClassData.startDate);
@@ -42,6 +43,81 @@ export const createMainClass = async (mainClassData: ICreateMainClassInput): Pro
   });
 
   return await newMainClass.save();
+};
+
+export const updateMainClass = async (
+  mainClassId: string,
+  updateData: Partial<ICreateMainClassInput>,
+): Promise<IMainClass> => {
+  const existingMainClass = await MainClass.findById(mainClassId);
+  if (!existingMainClass) {
+    const err = new Error("Main class not found");
+    (err as any).status = 404;
+    throw err;
+  }
+
+  if (updateData.startDate !== undefined) {
+    const startDate = new Date(updateData.startDate);
+    if (Number.isNaN(startDate.getTime())) {
+      const err = new Error("Invalid startDate");
+      (err as any).status = 400;
+      throw err;
+    }
+    existingMainClass.startDate = startDate;
+  }
+
+  if (updateData.duration !== undefined) {
+    if (!Number.isInteger(updateData.duration) || updateData.duration <= 0) {
+      const err = new Error("duration must be a positive integer (months)");
+      (err as any).status = 400;
+      throw err;
+    }
+    existingMainClass.duration = updateData.duration;
+  }
+
+  if (updateData.startDate !== undefined || updateData.duration !== undefined) {
+    const recalculatedEndDate = new Date(existingMainClass.startDate);
+    recalculatedEndDate.setMonth(recalculatedEndDate.getMonth() + existingMainClass.duration);
+    existingMainClass.endDate = recalculatedEndDate;
+  }
+
+  if (updateData.teacherEmail !== undefined) {
+    const teacherUser = await User.findOne({
+      email: updateData.teacherEmail.toLowerCase(),
+      role: { $in: ["Teacher", "Admin"] },
+    }).select("name email role");
+
+    if (!teacherUser) {
+      const err = new Error("Teacher/Admin not found with this email");
+      (err as any).status = 404;
+      throw err;
+    }
+
+    existingMainClass.teacherEmail = teacherUser.email.toLowerCase();
+    existingMainClass.teacherName = teacherUser.name;
+  }
+
+  if (updateData.name !== undefined) {
+    existingMainClass.name = updateData.name;
+  }
+
+  if (updateData.fees !== undefined) {
+    existingMainClass.fees = updateData.fees;
+  }
+
+  if (updateData.students !== undefined) {
+    existingMainClass.students = updateData.students;
+  }
+
+  if (updateData.batches !== undefined) {
+    existingMainClass.batches = updateData.batches;
+  }
+
+  if (updateData.isActive !== undefined) {
+    existingMainClass.isActive = updateData.isActive;
+  }
+
+  return await existingMainClass.save();
 };
 
 export const getAllMainClasses = async (): Promise<IMainClass[]> => {
@@ -209,6 +285,41 @@ export const removeStudentFromMainClass = async (
     removedStudentId: studentDoc._id.toString(),
     deletedStudentBatchCount: deleteResult.deletedCount ?? 0,
   };
+};
+
+export const deleteMainClass = async (mainClassId: string): Promise<void> => {
+  const mainClass = await MainClass.findById(mainClassId).select("_id");
+  if (!mainClass) {
+    const err = new Error("Main class not found");
+    (err as any).status = 404;
+    throw err;
+  }
+
+  const relatedBatches = await Batch.find({ mainClasses: mainClassId }).select("_id mainClasses students mainClassStudentPairs");
+
+  await Promise.all([
+    User.updateMany({ mainClasses: mainClassId }, { $pull: { mainClasses: mainClassId } }),
+    Student_Batch.deleteMany({ mainClass: mainClassId }),
+  ]);
+
+  for (const batch of relatedBatches) {
+    const removedStudentIds = new Set(
+      batch.mainClassStudentPairs
+        .filter((pair) => pair.mainClass.toString() === mainClassId)
+        .map((pair) => pair.student.toString()),
+    );
+
+    batch.mainClasses = batch.mainClasses.filter((id) => id.toString() !== mainClassId);
+    batch.mainClassStudentPairs = batch.mainClassStudentPairs.filter(
+      (pair) => pair.mainClass.toString() !== mainClassId,
+    );
+
+    batch.students = batch.students.filter((studentId) => !removedStudentIds.has(studentId.toString()));
+
+    await batch.save();
+  }
+
+  await MainClass.findByIdAndDelete(mainClassId);
 };
 
 export const updateStudentBatch = async (

@@ -47,6 +47,40 @@ export const createMainClass = async (req: Request, res: Response) => {
   }
 };
 
+export const updateMainClass = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== "Admin") {
+      return res.status(403).json({ message: "Access denied. Admin privileges required." });
+    }
+
+    const mainClassId = req.params.id;
+    const updateData = req.body;
+
+    if (!mainClassId) {
+      return res.status(400).json({ message: "mainClassId is required" });
+    }
+
+    const updatedMainClass = await mainClassService.updateMainClass(mainClassId, updateData);
+    return res.status(200).json({
+      message: "Main class updated successfully",
+      data: updatedMainClass,
+    });
+  } catch (error) {
+    const status = (error as any)?.status === 404 ? 404 : (error as any)?.status === 400 ? 400 : 500;
+    const message =
+      (error as any)?.status === 404
+        ? "Main class not found"
+        : (error as any)?.status === 400
+        ? "Invalid main class data"
+        : "Error updating main class";
+
+    return res.status(status).json({
+      message,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+};
+
 export const getAllMainClasses = async (_req: Request, res: Response) => {
   try {
     const mainClasses = await mainClassService.getAllMainClasses();
@@ -179,6 +213,32 @@ export const removeStudentFromMainClass = async (req: Request, res: Response) =>
         : (error as any)?.status === 400
         ? "Invalid request"
         : "Error removing student from main class";
+
+    return res.status(status).json({
+      message,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+};
+
+export const deleteMainClass = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== "Admin") {
+      return res.status(403).json({ message: "Access denied. Admin privileges required." });
+    }
+
+    const mainClassId = req.params.id;
+
+    if (!mainClassId) {
+      return res.status(400).json({ message: "mainClassId is required" });
+    }
+
+    await mainClassService.deleteMainClass(mainClassId);
+
+    return res.status(200).json({ message: "Main class deleted successfully" });
+  } catch (error) {
+    const status = (error as any)?.status === 404 ? 404 : 500;
+    const message = (error as any)?.status === 404 ? "Main class not found" : "Error deleting main class";
 
     return res.status(status).json({
       message,
