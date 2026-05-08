@@ -49,6 +49,7 @@ or
 - [GET /batch/students/:id](#route-batch-students)
 - [POST /batch/create](#route-batch-create)
 - [POST /batch/add-student/:id](#route-batch-add-student)
+- [DELETE /batch/remove-student/:id](#route-batch-remove-student)
 - [PUT /batch/edit/:id](#route-batch-edit)
 - [DELETE /batch/delete/:id](#route-batch-delete)
 
@@ -292,6 +293,40 @@ Request:
 {
 	"mainClassId": "69c2bb5d8932def09e153224",
 	"studentEmail": "a3@s.com"
+}
+```
+
+<a id="route-batch-remove-student"></a>
+### DELETE `/batch/remove-student/:id` (Admin/Teacher)
+What it does:
+- Removes a student from a batch for a specific main class.
+- Removes student from batch's `students` array.
+- Removes the student-mainClass pair from `mainClassStudentPairs`.
+- Removes batch from student's `batches` array in User model.
+
+Request:
+```json
+{
+	"mainClassId": "69c2bb5d8932def09e153224",
+	"studentId": "64f2bb5d8932def09e153118"
+}
+```
+
+Response:
+```json
+{
+	"message": "Student removed from batch successfully",
+	"data": {
+		"_id": "66c2bb5d8932def09e153445",
+		"name": "Batch A",
+		"weekday": "Monday",
+		"startTime": "09:00",
+		"endTime": "10:30",
+		"teacherEmail": "teacher@x.com",
+		"mainClasses": ["69c2bb5d8932def09e153224"],
+		"students": [],
+		"mainClassStudentPairs": []
+	}
 }
 ```
 
