@@ -134,3 +134,38 @@ export const addStudentToClass = async (req: Request, res: Response) => {
         res.status(status).json({ message, error: error instanceof Error ? error.message : String(error) });
     }
 };
+
+export const removeStudentFromClass = async (req: Request, res: Response) => {
+    try {
+        if (!req.user || !["Admin", "Teacher"].includes(req.user.role)) {
+            return res.status(403).json({ message: "Access denied. Admin or Teacher privileges required." });
+        }
+
+        const classId = req.params.id;
+        const { mainClassId, studentId } = req.body;
+
+        if (!mainClassId || !studentId) {
+            return res.status(400).json({ message: "mainClassId and studentId are required" });
+        }
+
+        const updatedClass = await classService.removeStudentFromClass(
+            classId,
+            mainClassId,
+            studentId,
+        );
+
+        res.status(200).json({
+            message: "Student removed from batch successfully",
+            data: updatedClass,
+        });
+    } catch (error) {
+        const status = [400, 404].includes((error as any)?.status) ? (error as any).status : 500;
+        const message = status === 400
+            ? (error instanceof Error ? error.message : "Invalid request data")
+            : status === 404
+                ? "Class not found"
+                : "Error removing student from class";
+
+        res.status(status).json({ message, error: error instanceof Error ? error.message : String(error) });
+    }
+};

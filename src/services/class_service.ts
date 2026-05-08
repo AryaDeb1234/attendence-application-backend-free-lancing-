@@ -289,3 +289,25 @@ export const showStudentsInClass = async (classId: string): Promise<Array<{ id: 
     }
     return classData.students.map((student: any) => ({ id: student._id.toString(), name: student.name }));
 };
+
+export const removeStudentFromClass = async (
+    classId: string,
+    mainClassId: string,
+    studentId: string,
+): Promise<IBatch> => {
+    const batch = await Batch.findById(classId);
+    if (!batch) {
+        const err = new Error("Class not found");
+        (err as any).status = 404;
+        throw err;
+    }
+
+    batch.mainClassStudentPairs = batch.mainClassStudentPairs.filter(
+        (pair) => !(pair.mainClass.toString() === mainClassId && pair.student.toString() === studentId),
+    );
+    batch.students = batch.students.filter((id) => id.toString() !== studentId);
+    
+    await User.findByIdAndUpdate(studentId, { $pull: { batches: batch._id } });
+
+    return await batch.save();
+};
