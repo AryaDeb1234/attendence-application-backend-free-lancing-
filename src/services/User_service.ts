@@ -145,14 +145,8 @@ export const createInstituteUser = async (userData: CreateInstituteUserInput): P
         throw err;
     }
 
-    if (role === "Student" && userData.documents && userData.documents.length > 3) {
+    if (userData.documents && userData.documents.length > 3) {
         const err = new Error("documents can contain at most 3 images");
-        (err as any).status = 400;
-        throw err;
-    }
-
-    if (role === "Teacher" && userData.documents && userData.documents.length > 0) {
-        const err = new Error("documents are only allowed for Student role");
         (err as any).status = 400;
         throw err;
     }
@@ -174,7 +168,7 @@ export const createInstituteUser = async (userData: CreateInstituteUserInput): P
         phone: userData.phone,
         adhar: role === "Student" ? userData.adhar : undefined,
         profilePic: userData.profilePic,
-        documents: role === "Student" ? (userData.documents ?? []) : [],
+        documents: userData.documents ?? [],
         role,
         batches: [],
         mainClasses: userData.mainClasses ?? [],
@@ -228,8 +222,8 @@ export const updateInstituteUserById = async (userId: string, updateData: Update
         throw err;
     }
 
-    if (nextRole !== "Student" && updateData.documents && updateData.documents.length > 0) {
-        const err = new Error("documents are only allowed for Student role");
+    if (updateData.documents !== undefined && updateData.documents.length > 3) {
+        const err = new Error("documents can contain at most 3 images");
         (err as any).status = 400;
         throw err;
     }
@@ -263,12 +257,19 @@ export const updateInstituteUserById = async (userId: string, updateData: Update
         validateUserProfileData(updateData);
     }
 
-    if (nextRole === "Student") {
-        if (updateData.documents !== undefined) {
+    if (updateData.documents !== undefined) {
+        if (nextRole === "Student" || nextRole === "Teacher") {
             user.documents = updateData.documents;
+        } else {
+            const err = new Error("documents are only allowed for Student or Teacher role");
+            (err as any).status = 400;
+            throw err;
         }
-    } else {
+    } else if (nextRole !== "Student" && nextRole !== "Teacher") {
         user.documents = [];
+    }
+
+    if (nextRole !== "Student" && nextRole !== "Teacher") {
         user.adhar = "";
         user.fatherName = undefined;
         user.dob = undefined;

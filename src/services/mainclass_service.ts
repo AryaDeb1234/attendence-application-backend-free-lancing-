@@ -329,7 +329,7 @@ export const updateStudentBatch = async (
   const studentBatch = await Student_Batch.findByIdAndUpdate(
     studentBatchId,
     updateData,
-    { new: true }
+    { new: true, runValidators: true }
   ).populate("student", "name email phone");
 
   if (!studentBatch) {

@@ -1,6 +1,7 @@
 import Batch,{ IBatch, ICreateBatchInput, IMainClassStudentPair } from "../models/Batch";
 import MainClass from "../models/MainClass";
 import User from "../models/User";
+import Student_Batch from "../models/Student_Batch";
 import { Types } from "mongoose";
 
 const formatStudentLabel = (student: { name?: string; email?: string } | null | undefined): string => {
@@ -287,7 +288,27 @@ export const showStudentsInClass = async (classId: string): Promise<Array<{ id: 
         (err as any).status = 404;
         throw err;
     }
-    return classData.students.map((student: any) => ({ id: student._id.toString(), name: student.name }));
+
+    const activeStudentIds = new Set<string>();
+    const studentBatches = await Student_Batch.find({
+        mainClass: { $in: classData.mainClasses },
+        student: { $in: classData.students },
+    }).select("student batchcompletion examcompletion certificateIssued");
+
+    for (const studentBatch of studentBatches) {
+        const isIncomplete =
+            !studentBatch.batchcompletion ||
+            !studentBatch.examcompletion ||
+            !studentBatch.certificateIssued;
+
+        if (isIncomplete) {
+            activeStudentIds.add(studentBatch.student.toString());
+        }
+    }
+
+    return classData.students
+        .filter((student: any) => activeStudentIds.has(student._id.toString()))
+        .map((student: any) => ({ id: student._id.toString(), name: student.name }));
 };
 
 export const removeStudentFromClass = async (

@@ -205,7 +205,7 @@ Form fields:
 - `adhar` (required for Student)
 - `mainClasses` (optional array of ids)
 - `profilePic` (optional file, max 1)
-- `documents` (optional files, max 3; student only)
+- `documents` (optional files, max 3; student or teacher)
 
 Response:
 ```json
@@ -225,6 +225,9 @@ Response:
 ### PATCH `/user/edit/:userId` (Admin, multipart/form-data)
 What it does:
 - Updates user details including images/documents/mainClasses.
+
+Form fields:
+- `documents` (optional files, max 3; student or teacher)
 
 When to use:
 - Edit user profile/admin panel.
@@ -254,7 +257,8 @@ What it does:
 <a id="route-batch-students"></a>
 ### GET `/batch/students/:id`
 What it does:
-- Fetches students mapped in the batch.
+- Fetches students mapped in the batch whose `Student_Batch` progress is not fully complete.
+- Excludes students only when `batchcompletion`, `examcompletion`, and `certificateIssued` are all `true`.
 
 <a id="route-batch-create"></a>
 ### POST `/batch/create` (Admin)
@@ -534,6 +538,7 @@ What it does:
 What it does:
 - Returns full fee dashboard for one student in one main class.
 - Includes `dueMonths`, `paidMonths`, `pendingMonths`, `nextDueMonth`, totals, overpaid amount.
+- Due months are calculated from the student batch `startDate` and `endDate`, so admin edits to the batch update unpaid months automatically.
 
 When to use:
 - Fees details page before payment.
@@ -547,6 +552,8 @@ Response example:
 	"mainClassName": "DSA 2",
 	"durationInMonths": 3,
 	"monthlyFees": 1000,
+	"courseStartDate": "2026-04-01T00:00:00.000Z",
+	"courseEndDate": "2026-06-30T00:00:00.000Z",
 	"dueMonths": ["April 2026", "May 2026", "June 2026"],
 	"paidMonths": ["April 2026", "May 2026"],
 	"pendingMonths": ["June 2026"],

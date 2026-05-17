@@ -27,13 +27,22 @@ const getMonthString = (date: Date): string => {
     return `${months[date.getMonth()]} ${date.getFullYear()}`;
 };
 
-const calculateDueMonths = (joinDate: Date, courseStartDate: Date, durationInMonths: number): string[] => {
+const calculateDueMonths = (startDate: Date, endDate: Date): string[] => {
     const dueMonths: string[] = [];
-    const startMonth = new Date(Math.max(joinDate.getTime(), courseStartDate.getTime()));
+    const startMonth = new Date(startDate);
+    const endMonth = new Date(endDate);
+
+    if (Number.isNaN(startMonth.getTime()) || Number.isNaN(endMonth.getTime()) || endMonth < startMonth) {
+        return dueMonths;
+    }
+
+    startMonth.setDate(1);
+    endMonth.setDate(1);
+
     let currentMonth = new Date(startMonth);
     currentMonth.setDate(1);
 
-    for (let i = 0; i < durationInMonths; i += 1) {
+    while (currentMonth <= endMonth) {
         dueMonths.push(getMonthString(currentMonth));
         currentMonth.setMonth(currentMonth.getMonth() + 1);
     }
@@ -83,6 +92,8 @@ type ResolvedStudentContext = {
     studentBatch: {
         rollno?: number;
         joinDate: Date;
+        startDate: Date;
+        endDate: Date;
         student: mongoose.Types.ObjectId;
     };
 };
@@ -97,7 +108,7 @@ const resolveStudentContext = async (
         const studentBatch = await Student_Batch.findOne({
             mainClass: mainClassId,
             student: directStudent._id,
-        }).select("rollno joinDate student");
+        }).select("rollno joinDate startDate endDate student");
 
         if (!studentBatch) {
             const err = new Error("Student is not enrolled in this main class");
@@ -114,7 +125,7 @@ const resolveStudentContext = async (
     const studentBatchById = await Student_Batch.findOne({
         _id: studentIdInput,
         mainClass: mainClassId,
-    }).select("rollno joinDate student");
+    }).select("rollno joinDate startDate endDate student");
 
     if (!studentBatchById) {
         const err = new Error("Student not found for this main class");
@@ -144,7 +155,7 @@ export const getFeesByMainClassStudent = async (mainClassId: string, studentId: 
     }
 
     const [mainClass, resolvedStudent] = await Promise.all([
-        MainClass.findById(mainClassId).select("name fees startDate endDate duration"),
+        MainClass.findById(mainClassId).select("name fees"),
         resolveStudentContext(mainClassId, studentId),
     ]);
 
@@ -159,21 +170,12 @@ export const getFeesByMainClassStudent = async (mainClassId: string, studentId: 
         .select("month totalAmount PaidAt")
         .sort({ PaidAt: -1 });
 
-    const durationInMonths = Number(mainClass.duration) || 0;
-    if (durationInMonths <= 0) {
-        const err = new Error("Main class duration must be greater than 0");
-        (err as any).status = 400;
-        throw err;
-    }
-
     const admissionMonth = getMonthString(resolvedStudent.studentBatch.joinDate);
     const dueMonths = calculateDueMonths(
-        resolvedStudent.studentBatch.joinDate,
-        mainClass.startDate,
-        durationInMonths,
+        resolvedStudent.studentBatch.startDate,
+        resolvedStudent.studentBatch.endDate,
     );
-    const calculatedCourseEndDate = new Date(mainClass.startDate);
-    calculatedCourseEndDate.setMonth(calculatedCourseEndDate.getMonth() + durationInMonths);
+    const durationInMonths = dueMonths.length;
     const paidFeesHistory = feeHistory.filter((record) => Boolean(record.PaidAt));
     const paidMonthLabels = [...paidFeesHistory]
         .sort((a, b) => new Date(a.PaidAt as Date).getTime() - new Date(b.PaidAt as Date).getTime())
@@ -197,8 +199,8 @@ export const getFeesByMainClassStudent = async (mainClassId: string, studentId: 
         monthlyFees: mainClass.fees,
         admissionDate: resolvedStudent.studentBatch.joinDate,
         admissionMonth,
-        courseStartDate: mainClass.startDate,
-        courseEndDate: calculatedCourseEndDate,
+        courseStartDate: resolvedStudent.studentBatch.startDate,
+        courseEndDate: resolvedStudent.studentBatch.endDate,
         dueMonths,
         paidMonths,
         pendingMonths,
