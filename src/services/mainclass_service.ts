@@ -126,7 +126,7 @@ export const getAllMainClasses = async (): Promise<IMainClass[]> => {
 
 export const getMainClassById = async (mainClassId: string) => {
   const mainClassData = await MainClass.findById(mainClassId)
-    .populate("students", "name email phone")
+    .populate("students", "name adhar phone")
     .populate("batches", "name startDate endDate");
 
   if (!mainClassData) {
@@ -137,7 +137,7 @@ export const getMainClassById = async (mainClassId: string) => {
 
   
   const studentBatches = await Student_Batch.find({ mainClass: mainClassId })
-    .populate("student", "name email phone")
+    .populate("student", "name adhar phone")
     .sort({ rollno: 1 });
 
   return {
@@ -148,7 +148,7 @@ export const getMainClassById = async (mainClassId: string) => {
 
 export const addStudentToMainClass = async (
   mainClassId: string,
-  studentEmail: string,
+  studentAdhar: string,
   admissionDate: Date
 ): Promise<{ mainClass: IMainClass; studentBatch: I_S_Batch }> => {
   
@@ -160,9 +160,10 @@ export const addStudentToMainClass = async (
   }
 
   
-  const student = await User.findOne({ email: studentEmail.toLowerCase() });
+  // Fetch the student by Aadhaar so main class enrollment works without email.
+  const student = await User.findOne({ adhar: studentAdhar.toString().trim() });
   if (!student) {
-    const err = new Error("Student not found with this email");
+    const err = new Error("Student not found with this adhar");
     (err as any).status = 404;
     throw err;
   }
@@ -215,7 +216,7 @@ export const addStudentToMainClass = async (
 
   
   const updatedMainClass = await MainClass.findById(mainClassId)
-    .populate("students", "name email")
+    .populate("students", "name adhar")
     .populate("batches", "name startDate endDate");
 
   return {
@@ -226,7 +227,7 @@ export const addStudentToMainClass = async (
 
 export const removeStudentFromMainClass = async (
   mainClassId: string,
-  studentIdentifier: { studentId?: string; studentEmail?: string },
+  studentIdentifier: { studentId?: string; studentAdhar?: string },
 ): Promise<{ mainClass: IMainClass; removedStudentId: string; deletedStudentBatchCount: number }> => {
   const mainClass = await MainClass.findById(mainClassId);
   if (!mainClass) {
@@ -238,9 +239,10 @@ export const removeStudentFromMainClass = async (
   let student: IUser | null = null;
   if (studentIdentifier.studentId) {
     student = (await User.findById(studentIdentifier.studentId)) as IUser | null;
-  } else if (studentIdentifier.studentEmail) {
+  } else if (studentIdentifier.studentAdhar) {
+    // Fetch the student by Aadhaar so removal works for students without email.
     student = (await User.findOne({
-      email: studentIdentifier.studentEmail.toLowerCase(),
+      adhar: studentIdentifier.studentAdhar.toString().trim(),
     })) as IUser | null;
   }
 
@@ -277,7 +279,7 @@ export const removeStudentFromMainClass = async (
   ]);
 
   const updatedMainClass = await MainClass.findById(mainClassId)
-    .populate("students", "name email")
+    .populate("students", "name adhar")
     .populate("batches", "name startDate endDate");
 
   return {
@@ -330,7 +332,7 @@ export const updateStudentBatch = async (
     studentBatchId,
     updateData,
     { new: true, runValidators: true }
-  ).populate("student", "name email phone");
+  ).populate("student", "name adhar phone");
 
   if (!studentBatch) {
     const err = new Error("Student batch not found");

@@ -189,7 +189,7 @@ export const editClass = async (classId: string, updateData: Partial<IBatch>): P
 export const addStudentToClass = async (
     classId: string,
     mainClassId: string,
-    studentEmail: string,
+    studentAdhar: string,
     requesterUserId: string,
     requesterRole?: string,
 ): Promise<IBatch> => {
@@ -216,9 +216,10 @@ export const addStudentToClass = async (
         throw err;
     }
 
-    const student = await User.findOne({ email: studentEmail.toLowerCase(), role: "Student" }).select("_id");
+    // Fetch the student by Aadhaar so batch assignment works for students without email.
+    const student = await User.findOne({ adhar: studentAdhar.toString().trim(), role: "Student" }).select("_id");
     if (!student) {
-        const err = new Error("Student not found with this email");
+        const err = new Error("Student not found with this adhar");
         (err as any).status = 404;
         throw err;
     }
@@ -266,9 +267,9 @@ export const addStudentToClass = async (
 export const getClassById = async (classId: string): Promise<IBatch> => {
     const classData = await Batch.findById(classId)
         .populate("mainClasses", "name fees startDate endDate teacherName teacherEmail isActive")
-        .populate("students", "name email phone role")
+        .populate("students", "name adhar phone role")
         .populate("mainClassStudentPairs.mainClass", "name fees")
-        .populate("mainClassStudentPairs.student", "name email phone role");
+        .populate("mainClassStudentPairs.student", "name adhar phone role");
     if (!classData) {
         const err = new Error("Class not found");
         (err as any).status = 404;
