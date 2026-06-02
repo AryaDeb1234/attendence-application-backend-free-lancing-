@@ -21,7 +21,7 @@ export const updateClassAttendanceRecord = async (
     classId: string,
     mainClassId: string,
     date: Date,
-    studentAdhar: string,
+    studentEmail: string,
     status: 'present' | 'absent',
 ): Promise<Iclass> => {
     
@@ -54,10 +54,9 @@ export const updateClassAttendanceRecord = async (
         throw err;
     }
 
-    // Fetch the student by Aadhaar so attendance works even when a student has no email.
-    const student = await User.findOne({ adhar: studentAdhar.toString().trim() }).select("_id role");
+    const student = await User.findOne({ email: studentEmail.toLowerCase() }).select("_id role");
     if (!student) {
-        const err = new Error("Student not found with this adhar");
+        const err = new Error("Student not found with this email");
         (err as any).status = 404;
         throw err;
     }
@@ -424,8 +423,8 @@ export const completeAttendanceAndNotifyAdmin = async (classId: string, date: Da
     }
 
     const classDocuments = await Class.find(filter)
-        .populate("Present_students", "name adhar phone")
-        .populate("Absent_students", "name adhar phone")
+        .populate("Present_students", "name email phone")
+        .populate("Absent_students", "name email phone")
         .populate("mainClass", "name")
         .populate("batch", "name");
 
@@ -452,7 +451,7 @@ export const completeAttendanceAndNotifyAdmin = async (classId: string, date: Da
     const presentStudents = classDocuments.flatMap((doc: any) =>
         (doc.Present_students as any[]).map((student: any) => ({
             name: student.name,
-            adhar: student.adhar,
+            email: student.email,
             phone: student.phone,
             mainClass: doc.mainClass?.name,
         })),
@@ -461,7 +460,7 @@ export const completeAttendanceAndNotifyAdmin = async (classId: string, date: Da
     const absentStudents = classDocuments.flatMap((doc: any) =>
         (doc.Absent_students as any[]).map((student: any) => ({
             name: student.name,
-            adhar: student.adhar,
+            email: student.email,
             phone: student.phone,
             mainClass: doc.mainClass?.name,
         })),
@@ -508,7 +507,7 @@ export const getMainClassAttendanceSummary = async (mainClassId: string) => {
     }
 
     const studentBatches = await Student_Batch.find({ mainClass: mainClassId })
-        .populate("student", "name adhar phone")
+        .populate("student", "name email phone")
         .sort({ joinDate: 1 });
 
     const summary = await Promise.all(
@@ -533,7 +532,7 @@ export const getMainClassAttendanceSummary = async (mainClassId: string) => {
             return {
                 studentId: student._id,
                 studentName: student.name,
-                studentAdhar: student.adhar,
+                studentEmail: student.email,
                 studentPhone: student.phone,
                 admissionDate: studentBatch.joinDate,
                 totalClasses,
@@ -561,7 +560,7 @@ export const getStudentMainClassAttendanceDetails = async (mainClassId: string, 
 
     const [mainClass, student, studentBatch] = await Promise.all([
         MainClass.findById(mainClassId).select("name"),
-        User.findById(studentId).select("name adhar phone"),
+        User.findById(studentId).select("name email phone"),
         Student_Batch.findOne({ mainClass: mainClassId, student: studentId }).select("joinDate"),
     ]);
 
@@ -614,7 +613,7 @@ export const getStudentMainClassAttendanceDetails = async (mainClassId: string, 
         mainClassName: mainClass.name,
         studentId,
         studentName: student.name,
-        studentAdhar: student.adhar,
+        studentEmail: student.email,
         studentPhone: student.phone,
         admissionDate: studentBatch.joinDate,
         totalClasses,

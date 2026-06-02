@@ -102,8 +102,8 @@ interface AttendanceCompleteEmailInput {
   adminEmails: string[];
   batchName: string;
   classDate: Date;
-  presentStudents?: Array<{ name: string; adhar?: string; phone?: string; mainClass?: string }>;
-  absentStudents: Array<{ name: string; adhar?: string; phone?: string }>;
+  presentStudents?: Array<{ name: string; email?: string; phone?: string; mainClass?: string }>;
+  absentStudents: Array<{ name: string; email?: string; phone?: string }>;
   presentCount: number;
   absentCount: number;
 }
@@ -121,13 +121,13 @@ export const sendAttendanceCompleteEmail = async (input: AttendanceCompleteEmail
 
   const presentLines = presentStudents.length
     ? presentStudents
-        .map((student, index) => `${index + 1}. ${student.name}${student.mainClass ? ` | ${student.mainClass}` : ""}${student.adhar ? ` | ${student.adhar}` : ""}${student.phone ? ` | ${student.phone}` : ""}`)
+        .map((student, index) => `${index + 1}. ${student.name}${student.mainClass ? ` | ${student.mainClass}` : ""}${student.email ? ` | ${student.email}` : ""}${student.phone ? ` | ${student.phone}` : ""}`)
         .join("\n")
     : "No present students";
 
   const absentLines = absentStudents.length
     ? absentStudents
-        .map((student, index) => `${index + 1}. ${student.name}${student.adhar ? ` | ${student.adhar}` : ""}${student.phone ? ` | ${student.phone}` : ""}`)
+        .map((student, index) => `${index + 1}. ${student.name}${student.email ? ` | ${student.email}` : ""}${student.phone ? ` | ${student.phone}` : ""}`)
         .join("\n")
     : "No absent students";
 
@@ -139,7 +139,7 @@ export const sendAttendanceCompleteEmail = async (input: AttendanceCompleteEmail
               <td style="padding: 14px 12px; border-bottom: 1px solid #e7edf5; font-size: 14px; color: #1f2937;">
                 <div style="font-weight: 700; color: #0f172a; margin-bottom: 8px;">Student ${index + 1}</div>
                 <div style="margin-bottom: 6px;"><strong>Name:</strong> ${student.name || "N/A"}</div>
-                <div style="margin-bottom: 6px; word-break: break-word;"><strong>Aadhaar No:</strong> ${student.adhar || "N/A"}</div>
+                <div style="margin-bottom: 6px; word-break: break-word;"><strong>Gmail:</strong> ${student.email || "N/A"}</div>
                 <div><strong>Phone Number:</strong> ${student.phone || "N/A"}</div>
               </td>
             </tr>

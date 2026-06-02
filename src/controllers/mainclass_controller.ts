@@ -115,15 +115,15 @@ export const addStudentToMainClass = async (req: Request, res: Response) => {
       return res.status(403).json({ message: "Access denied. Admin privileges required." });
     }
 
-    const { mainClassId, studentAdhar, admissionDate } = req.body;
+    const { mainClassId, studentEmail, admissionDate } = req.body;
 
-    if (!mainClassId || !studentAdhar || !admissionDate) {
-      return res.status(400).json({ message: "mainClassId, studentAdhar, and admissionDate are required" });
+    if (!mainClassId || !studentEmail || !admissionDate) {
+      return res.status(400).json({ message: "mainClassId, studentEmail, and admissionDate are required" });
     }
 
     const result = await mainClassService.addStudentToMainClass(
       mainClassId,
-      studentAdhar,
+      studentEmail,
       new Date(admissionDate)
     );
 
@@ -186,19 +186,19 @@ export const removeStudentFromMainClass = async (req: Request, res: Response) =>
       return res.status(403).json({ message: "Access denied. Admin privileges required." });
     }
 
-    const { mainClassId, studentId, studentAdhar } = req.body;
+    const { mainClassId, studentId, studentEmail } = req.body;
 
     if (!mainClassId) {
       return res.status(400).json({ message: "mainClassId is required" });
     }
 
-    if (!studentId && !studentAdhar) {
-      return res.status(400).json({ message: "studentId or studentAdhar is required" });
+    if (!studentId && !studentEmail) {
+      return res.status(400).json({ message: "studentId or studentEmail is required" });
     }
 
     const result = await mainClassService.removeStudentFromMainClass(mainClassId, {
       studentId,
-      studentAdhar,
+      studentEmail,
     });
 
     return res.status(200).json({

@@ -133,14 +133,8 @@ export const createInstituteUser = async (userData: CreateInstituteUserInput): P
         throw err;
     }
 
-    if (!userData.name || !userData.phone) {
-        const err = new Error("name, phone and role are required");
-        (err as any).status = 400;
-        throw err;
-    }
-
-    if (role === "Teacher" && !userData.email) {
-        const err = new Error("email is required for Teacher role");
+    if (!userData.name || !userData.email || !userData.phone) {
+        const err = new Error("name, email, phone and role are required");
         (err as any).status = 400;
         throw err;
     }
@@ -161,29 +155,16 @@ export const createInstituteUser = async (userData: CreateInstituteUserInput): P
         validateUserProfileData(userData);
     }
 
-    if (userData.email) {
-        // Keep email unique when provided, but do not require it for student records.
-        const existingByEmail = await User.findOne({ email: userData.email.toLowerCase() });
-        if (existingByEmail) {
-            const err = new Error("User already exists with this email");
-            (err as any).status = 400;
-            throw err;
-        }
-    }
-
-    if (userData.adhar) {
-        // Fetch by Aadhaar for student records that may not have an email.
-        const existingByAdhar = await User.findOne({ adhar: userData.adhar.toString().trim() });
-        if (existingByAdhar) {
-            const err = new Error("User already exists with this adhar");
-            (err as any).status = 400;
-            throw err;
-        }
+    const existingUser = await User.findOne({ email: userData.email.toLowerCase() });
+    if (existingUser) {
+        const err = new Error("User already exists with this email");
+        (err as any).status = 400;
+        throw err;
     }
 
     const newUser = await User.create({
         name: userData.name,
-        ...(userData.email ? { email: userData.email.toLowerCase() } : {}),
+        email: userData.email.toLowerCase(),
         phone: userData.phone,
         adhar: role === "Student" ? userData.adhar : undefined,
         profilePic: userData.profilePic,
@@ -225,7 +206,7 @@ export const updateInstituteUserById = async (userId: string, updateData: Update
         throw err;
     }
 
-    if (updateData.email && updateData.email.toLowerCase() !== user.email?.toLowerCase()) {
+    if (updateData.email && updateData.email.toLowerCase() !== user.email.toLowerCase()) {
         const exists = await User.findOne({ email: updateData.email.toLowerCase() }).select("_id");
         if (exists) {
             const err = new Error("User already exists with this email");
@@ -233,17 +214,6 @@ export const updateInstituteUserById = async (userId: string, updateData: Update
             throw err;
         }
         user.email = updateData.email.toLowerCase();
-    }
-
-    if (updateData.adhar && updateData.adhar.toString().trim() !== user.adhar?.toString().trim()) {
-        // Fetch by Aadhaar for student records that may not have an email.
-        const exists = await User.findOne({ adhar: updateData.adhar.toString().trim() }).select("_id");
-        if (exists) {
-            const err = new Error("User already exists with this adhar");
-            (err as any).status = 400;
-            throw err;
-        }
-        user.adhar = updateData.adhar.toString().trim();
     }
 
     if (updateData.documents && updateData.documents.length > 3) {
@@ -266,7 +236,7 @@ export const updateInstituteUserById = async (userId: string, updateData: Update
 
     if (updateData.name !== undefined) user.name = updateData.name;
     if (updateData.phone !== undefined) user.phone = updateData.phone;
-    if (updateData.adhar !== undefined) user.adhar = updateData.adhar.toString().trim();
+    if (updateData.adhar !== undefined) user.adhar = updateData.adhar;
     if (updateData.mainClasses !== undefined) user.mainClasses = updateData.mainClasses as any;
     if (updateData.profilePic !== undefined) user.profilePic = updateData.profilePic;
     if (updateData.role !== undefined) user.role = nextRole;

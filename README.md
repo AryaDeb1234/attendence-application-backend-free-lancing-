@@ -30,18 +30,6 @@ or
 { "message": "Token is not valid" }
 ```
 
-## 2.5 Frontend Migration Note: Aadhaar-Based Student Lookup
-
-Email is still used for login, OTP, teacher contact, and outgoing email notifications.
-For student fetch/assignment flows, the backend now uses Aadhaar instead of email.
-
-Frontend changes required:
-- Send `studentAdhar` in requests that fetch or assign a student record.
-- Keep `email` for teacher contact and notification flows.
-- In the add-user form, `email` is optional for `Student` and required for `Teacher`.
-- `adhar` is required when creating a `Student`.
-- If your UI previously searched students by email, switch the search input and labels to Aadhaar number.
-
 ## 3. API Summary
 
 ### Auth
@@ -211,7 +199,7 @@ When to use:
 
 Form fields:
 - `name` (required)
-- `email` (optional for `Student`, required for `Teacher`)
+- `email` (required)
 - `phone` (required)
 - `role` (required: `Student` or `Teacher`)
 - `adhar` (required for Student)
@@ -302,13 +290,13 @@ Request:
 <a id="route-batch-add-student"></a>
 ### POST `/batch/add-student/:id` (Admin/Teacher)
 What it does:
-- Adds student to batch for one selected main class using student Aadhaar number.
+- Adds student to batch for one selected main class using student email.
 
 Request:
 ```json
 {
 	"mainClassId": "69c2bb5d8932def09e153224",
-	"studentAdhar": "123412341234"
+	"studentEmail": "a3@s.com"
 }
 ```
 
@@ -410,7 +398,7 @@ Request:
 ```json
 {
 	"mainClassId": "69c2bb5d8932def09e153224",
-	"studentAdhar": "123412341234",
+	"studentEmail": "a3@s.com",
 	"admissionDate": "2026-04-25"
 }
 ```
@@ -435,7 +423,7 @@ or
 ```json
 {
 	"mainClassId": "69c2bb5d8932def09e153224",
-	"studentAdhar": "123412341234"
+	"studentEmail": "a3@s.com"
 }
 ```
 
@@ -476,7 +464,7 @@ Request:
 <a id="route-attendence-update"></a>
 ### PATCH `/attendence/update/:classId` (Admin)
 What it does:
-- Manual correction for one student using student Aadhaar number.
+- Manual correction for one student using student email.
 - Updates daily class list + attendance history record.
 
 When to use:
@@ -485,7 +473,7 @@ When to use:
 Request:
 ```json
 {
-	"studentAdhar": "123412341234",
+	"studentEmail": "a3@s.com",
 	"mainClassId": "69c2bb5d8932def09e153224",
 	"date": "2026-06-26",
 	"status": "present"
@@ -496,7 +484,7 @@ or
 
 ```json
 {
-	"studentAdhar": "123412341234",
+	"studentEmail": "a3@s.com",
 	"mainClassId": "69c2bb5d8932def09e153224",
 	"date": "2026-06-26",
 	"status": "absent"
