@@ -30,7 +30,7 @@ export const initializeFeesReminderCron = () => {
     console.log(`[Fees Reminder Cron] Triggered at ${new Date().toISOString()}`);
 
     try {
-      const activeMainClasses = await MainClass.find({ isActive: true });
+      const activeMainClasses = await MainClass.find({ isActive: true }).populate('teacher', 'name email');
 
       if (activeMainClasses.length === 0) {
         console.log('[Fees Reminder Cron] No active main classes found');
@@ -96,14 +96,17 @@ export const initializeFeesReminderCron = () => {
                 );
               }
 
+              const teacherEmailToUse = (mainClass as any).teacher?.email ?? mainClass.teacherEmail;
+              const teacherNameToUse = (mainClass as any).teacher?.name ?? mainClass.teacherName;
+
               await sendFeesReminderEmail({
                 studentName: student.name,
                 studentEmail: student.email,
                 className: mainClass.name,
                 monthString: currentMonthString,
                 feesAmount: mainClass.fees,
-                teacherName: mainClass.teacherName,
-                teacherEmail: mainClass.teacherEmail,
+                teacherName: teacherNameToUse,
+                teacherEmail: teacherEmailToUse,
               });
 
               console.log(
@@ -191,14 +194,17 @@ export const triggerFeesReminderManually = async () => {
           totalFeeRecordsCreated++;
         }
 
+        const teacherEmailToUse = (mainClass as any).teacher?.email ?? mainClass.teacherEmail;
+        const teacherNameToUse = (mainClass as any).teacher?.name ?? mainClass.teacherName;
+
         await sendFeesReminderEmail({
           studentName: student.name,
           studentEmail: student.email,
           className: mainClass.name,
           monthString: currentMonthString,
           feesAmount: mainClass.fees, 
-          teacherName: mainClass.teacherName,
-          teacherEmail: mainClass.teacherEmail,
+          teacherName: teacherNameToUse,
+          teacherEmail: teacherEmailToUse,
         });
 
         totalEmailsSent++;

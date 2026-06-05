@@ -187,17 +187,16 @@ export const getUserDetailsById = async (userId: string): Promise<IUser> => {
         throw err;
     }
 
-    // Backfill teacher/admin `mainClasses` from MainClass documents keyed by teacherEmail
+    // Backfill teacher/admin `mainClasses` from MainClass documents linked by `teacher` ObjectId
     try {
         if (user.role === "Teacher" || user.role === "Admin") {
-            const mainClassDocs = await MainClass.find({ teacherEmail: user.email.toLowerCase() }).select("_id");
+            const mainClassDocs = await MainClass.find({ teacher: user._id }).select("_id");
             const mainClassIds = mainClassDocs.map((m) => m._id.toString());
 
             const existingIds = (user.mainClasses ?? []).map((id: any) => id.toString());
-            const missing = mainClassIds.filter((id) => !existingIds.includes(id));
-
-            if (missing.length > 0) {
-                user.mainClasses = Array.from(new Set([...existingIds, ...mainClassIds]));
+            if (mainClassIds.length > 0) {
+                const merged = Array.from(new Set([...existingIds, ...mainClassIds]));
+                user.mainClasses = merged as any;
                 await user.save();
             }
         }

@@ -35,6 +35,7 @@ export const createMainClass = async (mainClassData: ICreateMainClassInput): Pro
     ...mainClassData,
     startDate,
     endDate,
+    teacher: teacherUser._id,
     teacherName: teacherUser.name,
     teacherEmail: teacherUser.email.toLowerCase(),
     students: mainClassData.students ?? [],
@@ -111,6 +112,7 @@ export const updateMainClass = async (
       throw err;
     }
 
+    existingMainClass.teacher = teacherUser._id;
     existingMainClass.teacherEmail = teacherUser.email.toLowerCase();
     existingMainClass.teacherName = teacherUser.name;
   }
