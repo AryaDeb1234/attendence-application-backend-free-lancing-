@@ -6,9 +6,7 @@ export interface IMainClass {
   endDate: Date;
   duration: number;
   fees: number;
-  teacher?: mongoose.Types.ObjectId;
-  teacherName: string;
-  teacherEmail: string;
+  teachers: mongoose.Types.ObjectId[];
   students: mongoose.Types.ObjectId[];
   batches: mongoose.Types.ObjectId[];
   isActive: boolean;
@@ -16,8 +14,7 @@ export interface IMainClass {
 
 export type ICreateMainClassInput = Omit<IMainClass, "teacherName" | "students" | "batches" | "isActive" | "endDate"> & {
   endDate?: Date;
-  teacherName?: string;
-  teacher?: mongoose.Types.ObjectId;
+  teachers?: mongoose.Types.ObjectId[];
   students?: mongoose.Types.ObjectId[];
   batches?: mongoose.Types.ObjectId[];
   isActive?: boolean;
@@ -30,9 +27,7 @@ const mainClassSchema = new mongoose.Schema<IMainClass>(
     duration: { type: Number, required: true, min: 1 },
     endDate: { type: Date, required: true },
     fees: { type: Number, required: true, min: 0 },
-    teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    teacherName: { type: String, required: true, trim: true },
-    teacherEmail: { type: String, required: true, trim: true, lowercase: true },
+    teachers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     students: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     batches: [{ type: mongoose.Schema.Types.ObjectId, ref: "Batch" }],
     isActive: { type: Boolean, default: true },

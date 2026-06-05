@@ -103,16 +103,16 @@ export const addStudentToClass = async (req: Request, res: Response) => {
         }
 
         const classId = req.params.id;
-        const { mainClassId, studentEmail } = req.body;
+        const { mainClassId, studentId, studentEmail } = req.body;
 
-        if (!mainClassId || !studentEmail) {
-            return res.status(400).json({ message: "mainClassId and studentEmail are required" });
+        if (!mainClassId || (!studentId && !studentEmail)) {
+            return res.status(400).json({ message: "mainClassId and studentId or studentEmail are required" });
         }
 
         const updatedClass = await classService.addStudentToClass(
             classId,
             mainClassId,
-            studentEmail,
+            { studentId, studentEmail },
             req.user.id,
             req.user.role,
         );

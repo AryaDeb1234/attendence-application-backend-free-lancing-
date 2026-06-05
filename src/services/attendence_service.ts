@@ -21,7 +21,7 @@ export const updateClassAttendanceRecord = async (
     classId: string,
     mainClassId: string,
     date: Date,
-    studentEmail: string,
+    studentIdentifier: { studentId?: string; studentEmail?: string },
     status: 'present' | 'absent',
 ): Promise<Iclass> => {
     
@@ -54,9 +54,15 @@ export const updateClassAttendanceRecord = async (
         throw err;
     }
 
-    const student = await User.findOne({ email: studentEmail.toLowerCase() }).select("_id role");
+    let student: any = null;
+    if (studentIdentifier.studentId) {
+        student = await User.findById(studentIdentifier.studentId).select("_id role");
+    } else if (studentIdentifier.studentEmail) {
+        student = await User.findOne({ email: studentIdentifier.studentEmail.toLowerCase() }).select("_id role");
+    }
+
     if (!student) {
-        const err = new Error("Student not found with this email");
+        const err = new Error("Student not found");
         (err as any).status = 404;
         throw err;
     }

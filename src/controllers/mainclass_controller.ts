@@ -18,8 +18,9 @@ export const createMainClass = async (req: Request, res: Response) => {
 
     const mainClassData: ICreateMainClassInput = req.body;
 
-    if (!mainClassData.teacherEmail) {
-      return res.status(400).json({ message: "teacherEmail is required" });
+    // Accept either `teachers` (array of user ids) or `teacherEmail` for backward compatibility
+    if (!((mainClassData as any).teachers && (mainClassData as any).teachers.length > 0) && !(mainClassData as any).teacherEmail) {
+      return res.status(400).json({ message: "teacherEmail or teachers is required" });
     }
 
     if (!mainClassData.startDate) {
@@ -115,15 +116,15 @@ export const addStudentToMainClass = async (req: Request, res: Response) => {
       return res.status(403).json({ message: "Access denied. Admin privileges required." });
     }
 
-    const { mainClassId, studentEmail, admissionDate } = req.body;
+    const { mainClassId, studentId, studentEmail, admissionDate } = req.body;
 
-    if (!mainClassId || !studentEmail || !admissionDate) {
-      return res.status(400).json({ message: "mainClassId, studentEmail, and admissionDate are required" });
+    if (!mainClassId || (!studentId && !studentEmail) || !admissionDate) {
+      return res.status(400).json({ message: "mainClassId, studentId/studentEmail, and admissionDate are required" });
     }
 
     const result = await mainClassService.addStudentToMainClass(
       mainClassId,
-      studentEmail,
+      { studentId, studentEmail },
       new Date(admissionDate)
     );
 

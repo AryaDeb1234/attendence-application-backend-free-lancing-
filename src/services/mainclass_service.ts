@@ -20,13 +20,24 @@ export const createMainClass = async (mainClassData: ICreateMainClassInput): Pro
   const endDate = new Date(startDate);
   endDate.setMonth(endDate.getMonth() + mainClassData.duration);
 
-  const teacherUser = await User.findOne({
-    email: mainClassData.teacherEmail.toLowerCase(),
-    role: { $in: ["Teacher", "Admin"] },
-  }).select("name email role");
+  // Resolve teacher users: prefer `teachers` array of ids, else use `teacherEmail` fallback
+  let teacherUsers = [] as (typeof User & { _id: any; name?: string; email?: string })[];
+  if (Array.isArray((mainClassData as any).teachers) && (mainClassData as any).teachers.length > 0) {
+    const ids = (mainClassData as any).teachers;
+    teacherUsers = await User.find({ _id: { $in:  ids }, role: { $in: ["Teacher", "Admin"] } }).select("name email role");
+  } else {
+    const teacherEmail = (mainClassData as any).teacherEmail?.toString().toLowerCase();
+    if (!teacherEmail) {
+      const err = new Error("teacherEmail or teachers is required");
+      (err as any).status = 400;
+      throw err;
+    }
+    const tu = await User.findOne({ email: teacherEmail, role: { $in: ["Teacher", "Admin"] } }).select("name email role");
+    if (tu) teacherUsers = [tu as any];
+  }
 
-  if (!teacherUser) {
-    const err = new Error("Teacher/Admin not found with this email");
+  if (!teacherUsers || teacherUsers.length === 0) {
+    const err = new Error("Teacher/Admin not found");
     (err as any).status = 404;
     throw err;
   }
@@ -35,9 +46,7 @@ export const createMainClass = async (mainClassData: ICreateMainClassInput): Pro
     ...mainClassData,
     startDate,
     endDate,
-    teacher: teacherUser._id,
-    teacherName: teacherUser.name,
-    teacherEmail: teacherUser.email.toLowerCase(),
+    teachers: teacherUsers.map((t) => t._id),
     students: mainClassData.students ?? [],
     batches: mainClassData.batches ?? [],
     isActive: mainClassData.isActive ?? true,
@@ -45,20 +54,22 @@ export const createMainClass = async (mainClassData: ICreateMainClassInput): Pro
 
   const savedMainClass = await newMainClass.save();
 
-  // Ensure the teacher's `mainClasses` array includes this main class
+  // Ensure each teacher's `mainClasses` array includes this main class
   try {
-    const teacherAny = teacherUser as any;
-    const existing = Array.isArray(teacherAny.mainClasses)
-      ? teacherAny.mainClasses.some((id: any) => id.toString() === savedMainClass._id.toString())
-      : false;
-
-    if (!existing) {
-      teacherAny.mainClasses = [...(teacherAny.mainClasses ?? []), savedMainClass._id];
-      await teacherAny.save();
-    }
+    await Promise.all(
+      teacherUsers.map(async (t) => {
+        const anyT = t as any;
+        const existing = Array.isArray(anyT.mainClasses)
+          ? anyT.mainClasses.some((id: any) => id.toString() === savedMainClass._id.toString())
+          : false;
+        if (!existing) {
+          anyT.mainClasses = [...(anyT.mainClasses ?? []), savedMainClass._id];
+          await anyT.save();
+        }
+      }),
+    );
   } catch (e) {
-    // Non-fatal: if updating teacher record fails, still return created main class
-    // (calling code will receive the created main class; inconsistent state can be fixed later)
+    // non-fatal
   }
 
   return savedMainClass;
@@ -100,21 +111,25 @@ export const updateMainClass = async (
     existingMainClass.endDate = recalculatedEndDate;
   }
 
-  if (updateData.teacherEmail !== undefined) {
-    const teacherUser = await User.findOne({
-      email: updateData.teacherEmail.toLowerCase(),
-      role: { $in: ["Teacher", "Admin"] },
-    }).select("name email role");
+    if ((updateData as any).teacherEmail !== undefined) {
+      const teacherUser = await User.findOne({
+        email: (updateData as any).teacherEmail.toLowerCase(),
+        role: { $in: ["Teacher", "Admin"] },
+      }).select("name email role");
 
     if (!teacherUser) {
       const err = new Error("Teacher/Admin not found with this email");
       (err as any).status = 404;
       throw err;
     }
+    existingMainClass.teachers = [teacherUser._id];
+  }
 
-    existingMainClass.teacher = teacherUser._id;
-    existingMainClass.teacherEmail = teacherUser.email.toLowerCase();
-    existingMainClass.teacherName = teacherUser.name;
+  if (updateData.teachers !== undefined) {
+    existingMainClass.teachers = updateData.teachers as any;
+    // update teacherName/teacherEmail to first teacher for compatibility if possible
+    // no longer maintain teacherName/teacherEmail fields
+    // caller should rely on populated `teachers` relationship instead
   }
 
   if (updateData.name !== undefined) {
@@ -141,13 +156,14 @@ export const updateMainClass = async (
 };
 
 export const getAllMainClasses = async (): Promise<IMainClass[]> => {
-  return await MainClass.find().sort({ createdAt: -1 });
+  return await MainClass.find().sort({ createdAt: -1 }).populate('teachers', 'name email').populate('students', 'name email');
 };
 
 export const getMainClassById = async (mainClassId: string) => {
   const mainClassData = await MainClass.findById(mainClassId)
     .populate("students", "name email phone")
-    .populate("batches", "name startDate endDate");
+    .populate("batches", "name startDate endDate")
+    .populate("teachers", "name email");
 
   if (!mainClassData) {
     const err = new Error("Main class not found");
@@ -168,7 +184,7 @@ export const getMainClassById = async (mainClassId: string) => {
 
 export const addStudentToMainClass = async (
   mainClassId: string,
-  studentEmail: string,
+  studentIdentifier: { studentId?: string; studentEmail?: string },
   admissionDate: Date
 ): Promise<{ mainClass: IMainClass; studentBatch: I_S_Batch }> => {
   
@@ -179,10 +195,15 @@ export const addStudentToMainClass = async (
     throw err;
   }
 
-  
-  const student = await User.findOne({ email: studentEmail.toLowerCase() });
+  let student: any = null;
+  if (studentIdentifier.studentId) {
+    student = await User.findById(studentIdentifier.studentId);
+  } else if (studentIdentifier.studentEmail) {
+    student = await User.findOne({ email: studentIdentifier.studentEmail.toLowerCase() });
+  }
+
   if (!student) {
-    const err = new Error("Student not found with this email");
+    const err = new Error("Student not found");
     (err as any).status = 404;
     throw err;
   }
@@ -236,7 +257,8 @@ export const addStudentToMainClass = async (
   
   const updatedMainClass = await MainClass.findById(mainClassId)
     .populate("students", "name email")
-    .populate("batches", "name startDate endDate");
+    .populate("batches", "name startDate endDate")
+    .populate("teachers", "name email");
 
   return {
     mainClass: updatedMainClass as IMainClass,
@@ -298,7 +320,8 @@ export const removeStudentFromMainClass = async (
 
   const updatedMainClass = await MainClass.findById(mainClassId)
     .populate("students", "name email")
-    .populate("batches", "name startDate endDate");
+    .populate("batches", "name startDate endDate")
+    .populate("teachers", "name email");
 
   return {
     mainClass: updatedMainClass as IMainClass,

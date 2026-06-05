@@ -104,10 +104,10 @@ export const updateClassAttendanceRecord = async (req: Request, res: Response) =
         }
 
         const classId = req.params.classId;
-        const { studentEmail, mainClassId, date, status } = req.body;
+        const { studentId, studentEmail, mainClassId, date, status } = req.body;
 
-        if (!studentEmail || !mainClassId || !date || !status) {
-            return res.status(400).json({ message: "studentEmail, mainClassId, date, and status (present/absent) are required" });
+        if ((!studentId && !studentEmail) || !mainClassId || !date || !status) {
+            return res.status(400).json({ message: "studentId/studentEmail, mainClassId, date, and status (present/absent) are required" });
         }
 
         if (!['present', 'absent'].includes(status)) {
@@ -118,7 +118,7 @@ export const updateClassAttendanceRecord = async (req: Request, res: Response) =
             classId,
             mainClassId,
             new Date(date),
-            studentEmail,
+            { studentId, studentEmail },
             status,
         );
         res.status(200).json({ 

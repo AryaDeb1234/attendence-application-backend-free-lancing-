@@ -31,7 +31,8 @@ const parseTimeToMinutes = (value: string): number => {
 const validateBatchCoreData = async (batchData: {
     startTime: string;
     endTime: string;
-    teacherEmail: string;
+    teachers?: Types.ObjectId[];
+    teacherEmail?: string;
     mainClasses: Types.ObjectId[];
 }): Promise<void> => {
     if (parseTimeToMinutes(batchData.startTime) >= parseTimeToMinutes(batchData.endTime)) {
@@ -40,14 +41,30 @@ const validateBatchCoreData = async (batchData: {
         throw err;
     }
 
-    const teacher = await User.findOne({
-        email: batchData.teacherEmail,
-        role: { $in: ["Teacher", "Admin"] },
-    }).select("_id");
-    if (!teacher) {
-        const err = new Error("Teacher/Admin not found for teacherEmail");
-        (err as any).status = 400;
-        throw err;
+    // Validate teacher(s): prefer `teachers` array of ids, else `teacherEmail` fallback
+    if (Array.isArray(batchData.teachers) && batchData.teachers.length > 0) {
+        const teachersFound = await User.find({ _id: { $in: batchData.teachers }, role: { $in: ["Teacher", "Admin"] } }).select("_id");
+        if (!teachersFound || teachersFound.length === 0) {
+            const err = new Error("One or more teachers not found or not Teacher/Admin");
+            (err as any).status = 400;
+            throw err;
+        }
+    } else {
+        const teacherEmail = batchData.teacherEmail;
+        if (!teacherEmail) {
+            const err = new Error("teachers or teacherEmail is required");
+            (err as any).status = 400;
+            throw err;
+        }
+        const teacher = await User.findOne({
+            email: teacherEmail,
+            role: { $in: ["Teacher", "Admin"] },
+        }).select("_id");
+        if (!teacher) {
+            const err = new Error("Teacher/Admin not found for teacherEmail");
+            (err as any).status = 400;
+            throw err;
+        }
     }
 
     const mainClassIds = [...new Set(batchData.mainClasses.map((id) => id.toString()))];
@@ -123,12 +140,13 @@ const validatePairAssignments = async (
 };
 
 export const createClass = async (classData: ICreateBatchInput): Promise<IBatch> => {
-    await validateBatchCoreData(classData);
+    await validateBatchCoreData(classData as any);
 
     const normalizedClassData: IBatch = {
         ...classData,
         students: classData.students ?? [],
         mainClassStudentPairs: classData.mainClassStudentPairs ?? [],
+        teachers: (classData as any).teachers ?? [],
     };
 
     await validatePairAssignments(
@@ -170,7 +188,7 @@ export const editClass = async (classId: string, updateData: Partial<IBatch>): P
         weekday: updateData.weekday ?? existingClass.weekday,
         startTime: updateData.startTime ?? existingClass.startTime,
         endTime: updateData.endTime ?? existingClass.endTime,
-        teacherEmail: updateData.teacherEmail ?? existingClass.teacherEmail,
+        teachers: updateData.teachers ?? existingClass.teachers,
         mainClasses: updateData.mainClasses ?? existingClass.mainClasses,
         students: updateData.students ?? existingClass.students,
         mainClassStudentPairs: updateData.mainClassStudentPairs ?? existingClass.mainClassStudentPairs,
@@ -189,7 +207,7 @@ export const editClass = async (classId: string, updateData: Partial<IBatch>): P
 export const addStudentToClass = async (
     classId: string,
     mainClassId: string,
-    studentEmail: string,
+    studentIdentifier: { studentId?: string; studentEmail?: string },
     requesterUserId: string,
     requesterRole?: string,
 ): Promise<IBatch> => {
@@ -216,9 +234,15 @@ export const addStudentToClass = async (
         throw err;
     }
 
-    const student = await User.findOne({ email: studentEmail.toLowerCase(), role: "Student" }).select("_id");
+    let student: any = null;
+    if (studentIdentifier.studentId) {
+        student = await User.findById(studentIdentifier.studentId).select("_id");
+    } else if (studentIdentifier.studentEmail) {
+        student = await User.findOne({ email: studentIdentifier.studentEmail.toLowerCase(), role: "Student" }).select("_id");
+    }
+
     if (!student) {
-        const err = new Error("Student not found with this email");
+        const err = new Error("Student not found");
         (err as any).status = 404;
         throw err;
     }
@@ -265,7 +289,8 @@ export const addStudentToClass = async (
 
 export const getClassById = async (classId: string): Promise<IBatch> => {
     const classData = await Batch.findById(classId)
-        .populate("mainClasses", "name fees startDate endDate teacherName teacherEmail isActive")
+        .populate("mainClasses", "name fees startDate endDate isActive")
+        .populate("teachers", "name email")
         .populate("students", "name email phone role")
         .populate("mainClassStudentPairs.mainClass", "name fees")
         .populate("mainClassStudentPairs.student", "name email phone role");
@@ -278,7 +303,7 @@ export const getClassById = async (classId: string): Promise<IBatch> => {
 };
 
 export const getAllClasses = async (): Promise<IBatch[]> => {
-    return await Batch.find();
+    return await Batch.find().populate('teachers', 'name email');
 };
 
 export const showStudentsInClass = async (classId: string): Promise<Array<{ id: string; name: string }>> => {

@@ -19,7 +19,7 @@ export interface IBatch {
   weekday: Weekday;
   startTime: string;
   endTime: string;
-  teacherEmail: string;
+  teachers: mongoose.Types.ObjectId[];
   mainClasses: mongoose.Types.ObjectId[];
   students: mongoose.Types.ObjectId[];
   mainClassStudentPairs: IMainClassStudentPair[];
@@ -64,7 +64,7 @@ const batchSchema = new mongoose.Schema<IBatch>(
         message: "endTime must be in HH:mm format",
       },
     },
-    teacherEmail: { type: String, required: true, lowercase: true, trim: true },
+    teachers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
     mainClasses: [{ type: mongoose.Schema.Types.ObjectId, ref: "MainClass", required: true }],
     students: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", default: [] }],
     mainClassStudentPairs: {

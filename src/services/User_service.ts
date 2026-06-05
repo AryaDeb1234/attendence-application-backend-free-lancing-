@@ -190,7 +190,7 @@ export const getUserDetailsById = async (userId: string): Promise<IUser> => {
     // Backfill teacher/admin `mainClasses` from MainClass documents linked by `teacher` ObjectId
     try {
         if (user.role === "Teacher" || user.role === "Admin") {
-            const mainClassDocs = await MainClass.find({ teacher: user._id }).select("_id");
+            const mainClassDocs = await MainClass.find({ teachers: user._id }).select("_id");
             const mainClassIds = mainClassDocs.map((m) => m._id.toString());
 
             const existingIds = (user.mainClasses ?? []).map((id: any) => id.toString());

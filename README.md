@@ -261,31 +261,85 @@ What it does:
 - Excludes students only when `batchcompletion`, `examcompletion`, and `certificateIssued` are all `true`.
 
 <a id="route-batch-create"></a>
-### POST `/batch/create` (Admin)
-What it does:
-- Creates a batch with schedule and mainclass mapping.
+### Batch Routes (examples)
 
-When to use:
-- Batch creation form.
+All batch endpoints use `teachers` as an array of teacher ObjectId strings. The backend will populate teacher objects (`_id`, `name`, `email`) on read endpoints.
 
-Request:
+POST `/batch/create` (Admin) — Create a new batch
+- Request body (JSON):
+
 ```json
 {
 	"name": "Morning Batch A",
 	"weekday": "Monday",
 	"startTime": "10:00",
 	"endTime": "12:00",
-	"teacherEmail": "teacher@x.com",
+	"teachers": ["64b6f4c2f1a5e3b0c1234567"],
 	"mainClasses": ["69c2bb5d8932def09e153224"],
 	"students": ["699346212530ac75eb40fd3d"],
 	"mainClassStudentPairs": [
-		{
-			"mainClass": "69c2bb5d8932def09e153224",
-			"student": "699346212530ac75eb40fd3d"
-		}
+		{ "mainClass": "69c2bb5d8932def09e153224", "student": "699346212530ac75eb40fd3d" }
 	]
 }
 ```
+
+- Response (201 Created):
+
+```json
+{ "_id": "66c2bb5d8932def09e153445", "name": "Morning Batch A", "teachers": ["64b6f4c2f1a5e3b0c1234567"], "mainClasses": ["69c2bb5d8932def09e153224"], "students": ["699346212530ac75eb40fd3d"] }
+```
+
+GET `/batch` — List batches (populates `teachers`)
+- Response example:
+
+```json
+[
+	{ "_id": "66c2bb5d8932def09e153445", "name": "Morning Batch A", "teachers": [{"_id":"64b6f4c2f1a5e3b0c1234567","name":"Alice","email":"alice@x.com"}] }
+]
+```
+
+GET `/batch/show/:id` — Get batch details (populates `teachers`, `mainClasses`, `students`)
+- Response example:
+
+```json
+{
+	"_id": "66c2bb5d8932def09e153445",
+	"name": "Morning Batch A",
+	"teachers": [{"_id":"64b6f4c2f1a5e3b0c1234567","name":"Alice","email":"alice@x.com"}],
+	"mainClasses": [{"_id":"69c2bb5d8932def09e153224","name":"DSA 2","fees":1000}],
+	"students": [{"_id":"699346212530ac75eb40fd3d","name":"Arya3","email":"a3@s.com"}]
+}
+```
+
+POST `/batch/add-student/:id` — Add student to a batch for a specific main class
+- Request body (preferred):
+
+```json
+{ "mainClassId": "69c2bb5d8932def09e153224", "studentId": "699346212530ac75eb40fd3d" }
+```
+
+- Optional fallback (legacy):
+
+```json
+{ "mainClassId": "69c2bb5d8932def09e153224", "studentEmail": "a3@s.com" }
+```
+
+PUT `/batch/edit/:id` — Update batch
+- Request body (send only fields to change):
+
+```json
+{ "startTime": "09:00", "endTime": "11:00", "teachers": ["64b6f4c2f1a5e3b0c1234567"] }
+```
+
+DELETE `/batch/remove-student/:id` — Remove student from batch
+- Request body:
+
+```json
+{ "mainClassId": "69c2bb5d8932def09e153224", "studentId": "699346212530ac75eb40fd3d" }
+```
+
+DELETE `/batch/delete/:id` — Delete a batch (Admin)
+
 
 <a id="route-batch-add-student"></a>
 ### POST `/batch/add-student/:id` (Admin/Teacher)
@@ -326,7 +380,7 @@ Response:
 		"weekday": "Monday",
 		"startTime": "09:00",
 		"endTime": "10:30",
-		"teacherEmail": "teacher@x.com",
+		"teachers": ["64b6f4c2f1a5e3b0c1234567"],
 		"mainClasses": ["69c2bb5d8932def09e153224"],
 		"students": [],
 		"mainClassStudentPairs": []
@@ -353,25 +407,82 @@ What it does:
 What it does:
 - Fetches all main classes.
 
-<a id="route-mainclass-show"></a>
-### GET `/mainclass/show/:id`
-What it does:
-- Fetches main class details and student progress (`Student_Batch`).
-
 <a id="route-mainclass-create"></a>
-### POST `/mainclass/create` (Admin)
-What it does:
-- Creates main class.
-- `endDate` is auto-calculated from `startDate + duration` (months).
+### MainClass Routes (examples)
 
-<a id="route-mainclass-edit"></a>
-### PATCH `/mainclass/edit/:id` (Admin)
-What it does:
-- Updates an existing main class.
-- Recalculates `endDate` if `startDate` or `duration` changes.
+Main classes now store `teachers` as an array of teacher ids. The server calculates `endDate` automatically from `startDate` and `duration`.
 
-<a id="route-mainclass-delete"></a>
-### DELETE `/mainclass/delete/:id` (Admin)
+POST `/mainclass/create` (Admin) — Create main class
+- Request body:
+
+```json
+{
+	"name": "DSA 2",
+	"startDate": "2026-04-01",
+	"duration": 3,
+	"fees": 1000,
+	"teachers": ["64b6f4c2f1a5e3b0c1234567"]
+}
+```
+
+- Response (201 Created):
+
+```json
+{ "_id": "69c2bb5d8932def09e153224", "name": "DSA 2", "startDate": "2026-04-01", "endDate": "2026-07-01", "duration": 3, "fees": 1000, "teachers": [ {"_id":"64b6f4c2f1a5e3b0c1234567","name":"Alice","email":"alice@x.com"} ] }
+```
+
+GET `/mainclass` — List main classes (populates `teachers`)
+- Response example:
+
+```json
+[
+	{ "_id": "69c2bb5d8932def09e153224", "name": "DSA 2", "teachers": [{"_id":"64b6f4c2f1a5e3b0c1234567","name":"Alice","email":"alice@x.com"}], "fees": 1000 }
+]
+```
+
+GET `/mainclass/show/:id` — Get main class details (populates `teachers`, `students`, `batches`)
+- Response example:
+
+```json
+{
+	"_id": "69c2bb5d8932def09e153224",
+	"name": "DSA 2",
+	"teachers": [{"_id":"64b6f4c2f1a5e3b0c1234567","name":"Alice","email":"alice@x.com"}],
+	"students": [{"_id":"699346212530ac75eb40fd3d","name":"Arya3"}],
+	"batches": [{"_id":"66c2bb5d8932def09e153445","name":"Morning Batch A"}],
+	"fees": 1000,
+	"startDate": "2026-04-01",
+	"endDate": "2026-07-01"
+}
+```
+
+PATCH `/mainclass/edit/:id` — Update a main class (Admin)
+- Example update body (partial):
+
+```json
+{ "fees": 1200, "teachers": ["64b6f4c2f1a5e3b0c1234567","64b6f4c2f1a5e3b0c7654321"] }
+```
+
+POST `/mainclass/add-student` — Add a student to a main class
+- Request (preferred):
+
+```json
+{ "mainClassId": "69c2bb5d8932def09e153224", "studentId": "699346212530ac75eb40fd3d", "admissionDate": "2026-04-25" }
+```
+
+- Optional fallback (legacy):
+
+```json
+{ "mainClassId": "69c2bb5d8932def09e153224", "studentEmail": "a3@s.com", "admissionDate": "2026-04-25" }
+```
+
+DELETE `/mainclass/remove-student` — Remove a student
+- Request:
+
+```json
+{ "mainClassId": "69c2bb5d8932def09e153224", "studentId": "699346212530ac75eb40fd3d" }
+```
+
 What it does:
 - Deletes a main class.
 - Removes related references from `User.mainClasses`, `Batch.mainClasses`, and `Student_Batch` records.
@@ -383,7 +494,7 @@ Request:
 	"startDate": "2026-04-01",
 	"duration": 3,
 	"fees": 1000,
-	"teacherEmail": "teacher@x.com"
+	"teachers": ["64b6f4c2f1a5e3b0c1234567"]
 }
 ```
 
@@ -470,17 +581,18 @@ What it does:
 When to use:
 - Admin correction if student was marked wrong.
 
-Request:
+Request (preferred):
+
 ```json
 {
-	"studentEmail": "a3@s.com",
+	"studentId": "699346212530ac75eb40fd3d",
 	"mainClassId": "69c2bb5d8932def09e153224",
 	"date": "2026-06-26",
 	"status": "present"
 }
 ```
 
-or
+Optional fallback (legacy):
 
 ```json
 {
@@ -630,7 +742,7 @@ What it does:
 	"weekday": "Monday",
 	"startTime": "10:00",
 	"endTime": "12:00",
-	"teacherEmail": "teacher@x.com",
+	"teachers": ["ObjectId"],
 	"mainClasses": ["ObjectId"],
 	"students": ["ObjectId"],
 	"mainClassStudentPairs": [
@@ -648,8 +760,7 @@ What it does:
 	"duration": 3,
 	"endDate": "2026-07-01T00:00:00.000Z",
 	"fees": 1000,
-	"teacherName": "Teacher Name",
-	"teacherEmail": "teacher@x.com",
+	"teachers": ["ObjectId"],
 	"students": ["ObjectId"],
 	"batches": ["ObjectId"],
 	"isActive": true

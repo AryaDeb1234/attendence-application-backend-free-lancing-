@@ -30,7 +30,7 @@ export const initializeFeesReminderCron = () => {
     console.log(`[Fees Reminder Cron] Triggered at ${new Date().toISOString()}`);
 
     try {
-      const activeMainClasses = await MainClass.find({ isActive: true }).populate('teacher', 'name email');
+      const activeMainClasses = await MainClass.find({ isActive: true }).populate('teachers', 'name email');
 
       if (activeMainClasses.length === 0) {
         console.log('[Fees Reminder Cron] No active main classes found');
@@ -96,8 +96,8 @@ export const initializeFeesReminderCron = () => {
                 );
               }
 
-              const teacherEmailToUse = (mainClass as any).teacher?.email ?? mainClass.teacherEmail;
-              const teacherNameToUse = (mainClass as any).teacher?.name ?? mainClass.teacherName;
+              const teachersArr = (mainClass as any).teachers ?? [];
+              const teacherList = teachersArr.map((t: any) => ({ name: t?.name, email: t?.email }));
 
               await sendFeesReminderEmail({
                 studentName: student.name,
@@ -105,8 +105,7 @@ export const initializeFeesReminderCron = () => {
                 className: mainClass.name,
                 monthString: currentMonthString,
                 feesAmount: mainClass.fees,
-                teacherName: teacherNameToUse,
-                teacherEmail: teacherEmailToUse,
+                teachers: teacherList,
               });
 
               console.log(
@@ -148,7 +147,7 @@ export const triggerFeesReminderManually = async () => {
   );
 
   try {
-    const activeMainClasses = await MainClass.find({ isActive: true });
+    const activeMainClasses = await MainClass.find({ isActive: true }).populate('teachers', 'name email');
 
     if (activeMainClasses.length === 0) {
       console.log('[Fees Reminder Manual] No active main classes found');
@@ -194,17 +193,16 @@ export const triggerFeesReminderManually = async () => {
           totalFeeRecordsCreated++;
         }
 
-        const teacherEmailToUse = (mainClass as any).teacher?.email ?? mainClass.teacherEmail;
-        const teacherNameToUse = (mainClass as any).teacher?.name ?? mainClass.teacherName;
+        const teachersArr = (mainClass as any).teachers ?? [];
+        const teacherList = teachersArr.map((t: any) => ({ name: t?.name, email: t?.email }));
 
         await sendFeesReminderEmail({
           studentName: student.name,
           studentEmail: student.email,
           className: mainClass.name,
           monthString: currentMonthString,
-          feesAmount: mainClass.fees, 
-          teacherName: teacherNameToUse,
-          teacherEmail: teacherEmailToUse,
+          feesAmount: mainClass.fees,
+          teachers: teacherList,
         });
 
         totalEmailsSent++;

@@ -12,7 +12,7 @@ async function run() {
   await mongoose.connect(mongoUrl, { });
   console.log('Connected to DB', mongoUrl);
 
-  const classesWithoutTeacher = await MainClass.find({ $or: [{ teacher: null }, { teacher: { $exists: false } }], teacherEmail: { $exists: true, $ne: null } });
+  const classesWithoutTeacher = await MainClass.find({ $or: [{ teachers: null }, { teachers: { $exists: false } }, { teachers: { $size: 0 } }], teacherEmail: { $exists: true, $ne: null } });
   console.log(`Found ${classesWithoutTeacher.length} main classes without teacher ObjectId but with teacherEmail`);
 
   let assigned = 0;
@@ -33,7 +33,7 @@ async function run() {
         continue;
       }
 
-      mc.teacher = user._id;
+      mc.teachers = [user._id];
       await mc.save();
 
       // ensure user's mainClasses includes this class
@@ -51,12 +51,15 @@ async function run() {
   }
 
   // Additionally, ensure user.mainClasses are populated from classes that have teacher set
-  const allClassesWithTeacher = await MainClass.find({ teacher: { $exists: true, $ne: null } }).select('_id teacher');
+  const allClassesWithTeacher = await MainClass.find({ teachers: { $exists: true, $ne: null } }).select('_id teachers');
   const teacherMap = new Map<string, string[]>();
   for (const mc of allClassesWithTeacher) {
-    const t = mc.teacher?.toString();
-    if (!t) continue;
-    teacherMap.set(t, [...(teacherMap.get(t) ?? []), mc._id.toString()]);
+    const ts = (mc as any).teachers ?? [];
+    for (const t of ts) {
+      const tid = t?.toString();
+      if (!tid) continue;
+      teacherMap.set(tid, [...(teacherMap.get(tid) ?? []), mc._id.toString()]);
+    }
   }
 
   let updatedUsers = 0;

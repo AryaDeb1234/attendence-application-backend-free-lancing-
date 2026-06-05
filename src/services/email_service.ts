@@ -251,12 +251,16 @@ interface FeesReminderEmailInput {
   className: string;
   monthString: string;
   feesAmount: number;
-  teacherName: string;
-  teacherEmail: string;
+  teachers?: Array<{ name?: string; email?: string }>;
 }
 
 export const sendFeesReminderEmail = async (input: FeesReminderEmailInput) => {
-  const { studentName, studentEmail, className, monthString, feesAmount, teacherName, teacherEmail } = input;
+  const { studentName, studentEmail, className, monthString, feesAmount, teachers } = input;
+
+  const teacherEmails = (teachers ?? []).map((t) => t?.email).filter(Boolean);
+  const teacherNames = (teachers ?? []).map((t) => t?.name).filter(Boolean);
+  const teacherEmail = teacherEmails.length > 0 ? teacherEmails.join(', ') : '';
+  const teacherName = teacherNames.length > 0 ? teacherNames.join(', ') : '';
 
   const html = `
     <html>
