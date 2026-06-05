@@ -12,7 +12,7 @@ router.post(
 	protect,
 	upload.fields([
 		{ name: "profilePic", maxCount: 1 },
-		{ name: "documents", maxCount: 3 },
+		{ name: "documents", maxCount: 3 }, 
 	]),
 	userController.addInstituteUser,
 );
@@ -21,7 +21,7 @@ router.patch(
 	protect,
 	upload.fields([
 		{ name: "profilePic", maxCount: 1 },
-		{ name: "documents", maxCount: 3 },
+		{ name: "documents", maxCount: 3 }, 
 	]),
 	userController.editInstituteUser,
 );

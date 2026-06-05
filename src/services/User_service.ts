@@ -270,7 +270,8 @@ export const updateInstituteUserById = async (userId: string, updateData: Update
     }
 
     if (nextRole !== "Student" && nextRole !== "Teacher") {
-        user.adhar = "";
+        // remove the adhar field so the sparse unique index won't treat it as a duplicate
+        (user as any).adhar = undefined;
         user.fatherName = undefined;
         user.dob = undefined;
         user.address = undefined;
