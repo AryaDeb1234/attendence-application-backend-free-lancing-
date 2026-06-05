@@ -1,4 +1,5 @@
 import User, { IUser } from '../models/User';
+import MainClass from '../models/MainClass';
 import Otp from '../models/Otp';
 import { generateToken } from '../utilis/jwt_utilis';
 import { requestOTP,verfiyOTP } from './Auth_Service';
@@ -179,16 +180,36 @@ export const createInstituteUser = async (userData: CreateInstituteUserInput): P
 };
 
 export const getUserDetailsById = async (userId: string): Promise<IUser> => {
-    const user = await User.findById(userId)
-        .populate("batches", "name weekday startTime endTime")
-        .populate("mainClasses", "name startDate endDate duration fees");
+    const user = await User.findById(userId);
     if (!user) {
         const err = new Error("User not found");
         (err as any).status = 404;
         throw err;
     }
 
-    return user;
+    // Backfill teacher/admin `mainClasses` from MainClass documents keyed by teacherEmail
+    try {
+        if (user.role === "Teacher" || user.role === "Admin") {
+            const mainClassDocs = await MainClass.find({ teacherEmail: user.email.toLowerCase() }).select("_id");
+            const mainClassIds = mainClassDocs.map((m) => m._id.toString());
+
+            const existingIds = (user.mainClasses ?? []).map((id: any) => id.toString());
+            const missing = mainClassIds.filter((id) => !existingIds.includes(id));
+
+            if (missing.length > 0) {
+                user.mainClasses = Array.from(new Set([...existingIds, ...mainClassIds]));
+                await user.save();
+            }
+        }
+    } catch (e) {
+        // non-fatal: continue to return user details even if backfill fails
+    }
+
+    const populated = await User.findById(userId)
+        .populate("batches", "name weekday startTime endTime")
+        .populate("mainClasses", "name startDate endDate duration fees");
+
+    return populated as IUser;
 };
 
 export const updateInstituteUserById = async (userId: string, updateData: UpdateInstituteUserInput): Promise<IUser> => {

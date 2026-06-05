@@ -42,7 +42,25 @@ export const createMainClass = async (mainClassData: ICreateMainClassInput): Pro
     isActive: mainClassData.isActive ?? true,
   });
 
-  return await newMainClass.save();
+  const savedMainClass = await newMainClass.save();
+
+  // Ensure the teacher's `mainClasses` array includes this main class
+  try {
+    const teacherAny = teacherUser as any;
+    const existing = Array.isArray(teacherAny.mainClasses)
+      ? teacherAny.mainClasses.some((id: any) => id.toString() === savedMainClass._id.toString())
+      : false;
+
+    if (!existing) {
+      teacherAny.mainClasses = [...(teacherAny.mainClasses ?? []), savedMainClass._id];
+      await teacherAny.save();
+    }
+  } catch (e) {
+    // Non-fatal: if updating teacher record fails, still return created main class
+    // (calling code will receive the created main class; inconsistent state can be fixed later)
+  }
+
+  return savedMainClass;
 };
 
 export const updateMainClass = async (
