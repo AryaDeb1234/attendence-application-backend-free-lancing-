@@ -183,15 +183,38 @@ export const editClass = async (classId: string, updateData: Partial<IBatch>): P
         throw err;
     }
 
+    const payload = updateData as Partial<IBatch> & {
+        mainClassId?: string;
+    };
+
+    let mergedMainClasses = payload.mainClasses ? [...payload.mainClasses] : [...existingClass.mainClasses];
+
+    if (payload.mainClassId) {
+        const mainClass = await MainClass.findById(payload.mainClassId).select("_id");
+        if (!mainClass) {
+            const err = new Error("Main class not found");
+            (err as any).status = 404;
+            throw err;
+        }
+
+        const alreadyIncluded = mergedMainClasses.some(
+            (id) => id.toString() === mainClass._id.toString(),
+        );
+
+        if (!alreadyIncluded) {
+            mergedMainClasses.push(mainClass._id);
+        }
+    }
+
     const mergedClassData: IBatch = {
-        name: updateData.name ?? existingClass.name,
-        weekday: updateData.weekday ?? existingClass.weekday,
-        startTime: updateData.startTime ?? existingClass.startTime,
-        endTime: updateData.endTime ?? existingClass.endTime,
-        teachers: updateData.teachers ?? existingClass.teachers,
-        mainClasses: updateData.mainClasses ?? existingClass.mainClasses,
-        students: updateData.students ?? existingClass.students,
-        mainClassStudentPairs: updateData.mainClassStudentPairs ?? existingClass.mainClassStudentPairs,
+        name: payload.name ?? existingClass.name,
+        weekday: payload.weekday ?? existingClass.weekday,
+        startTime: payload.startTime ?? existingClass.startTime,
+        endTime: payload.endTime ?? existingClass.endTime,
+        teachers: payload.teachers ?? existingClass.teachers,
+        mainClasses: mergedMainClasses,
+        students: payload.students ?? existingClass.students,
+        mainClassStudentPairs: payload.mainClassStudentPairs ?? existingClass.mainClassStudentPairs,
     };
 
     await validateBatchCoreData(mergedClassData);
@@ -200,7 +223,7 @@ export const editClass = async (classId: string, updateData: Partial<IBatch>): P
         mergedClassData.students,
         mergedClassData.mainClassStudentPairs,
     );
-    Object.assign(existingClass, updateData);
+    Object.assign(existingClass, payload, { mainClasses: mergedMainClasses });
     return await existingClass.save();
 };
 

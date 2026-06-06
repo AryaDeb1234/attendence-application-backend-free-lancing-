@@ -328,8 +328,16 @@ PUT `/batch/edit/:id` — Update batch
 - Request body (send only fields to change):
 
 ```json
-{ "startTime": "09:00", "endTime": "11:00", "teachers": ["64b6f4c2f1a5e3b0c1234567"] }
+{
+	"startTime": "09:00",
+	"endTime": "11:00",
+	"teachers": ["64b6f4c2f1a5e3b0c1234567"],
+	"mainClassId": "69c2bb5d8932def09e153224"
+}
 ```
+
+- Use `mainClassId` when you want to attach one already-created main class to this batch.
+- If that main class is already in the batch, the backend leaves it unchanged.
 
 DELETE `/batch/remove-student/:id` — Remove student from batch
 - Request body:
