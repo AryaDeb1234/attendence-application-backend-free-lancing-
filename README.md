@@ -551,9 +551,9 @@ Response:
 ```
 
 <a id="route-mainclass-patch-studentbatch"></a>
-### PATCH `/mainclass/:studentBatchId` (Admin)
+### PATCH `/mainclass/:studentBatchId` (Admin/Teacher)
 What it does:
-- Updates Student_Batch progress flags/fields.
+- Updates Student_Batch progress flags/fields. Accessible to Admin and assigned Teachers.
 
 ---
 

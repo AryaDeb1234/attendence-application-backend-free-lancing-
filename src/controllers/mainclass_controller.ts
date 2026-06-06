@@ -150,8 +150,8 @@ export const addStudentToMainClass = async (req: Request, res: Response) => {
 
 export const updateStudentBatch = async (req: Request, res: Response) => {
   try {
-    if (!req.user || req.user.role !== "Admin") {
-      return res.status(403).json({ message: "Access denied. Admin privileges required." });
+    if (!req.user || !["Admin", "Teacher"].includes(req.user.role)) {
+      return res.status(403).json({ message: "Access denied. Admin or Teacher privileges required." });
     }
 
     const { studentBatchId } = req.params;
