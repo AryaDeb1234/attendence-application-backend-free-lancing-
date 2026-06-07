@@ -1,7 +1,8 @@
- import express from 'express'; 
+import express from 'express'; 
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 
 import { config } from './config/db';
 import authRoutes from './routes/Auth_routes';
@@ -28,6 +29,10 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve frontend static files from the built `frontend_dist` directory
+const frontendPath = path.join(__dirname, '..', 'frontend_dist');
+app.use(express.static(frontendPath));
+
 app.get('/', (req, res) => {
   res.send('Welcome to the Express TypeScript Server!');
 });
@@ -38,6 +43,18 @@ app.use('/user', userRoutes);
 app.use('/attendence', attendenceRoutes);
 app.use('/fees', feesRoutes);
 app.use('/mainclass', mainClassRoutes);
+
+
+// SPA fallback using a middleware (avoids path-to-regexp route parsing issues)
+app.use((req, res, next) => {
+  if (req.method !== 'GET') return next();
+  const accepts = req.headers.accept || '';
+  if (!accepts.includes('text/html')) return next();
+  const indexFile = path.join(frontendPath, 'index.html');
+  res.sendFile(indexFile, (err) => {
+    if (err) return next();
+  }); 
+});
 
 app.use((req, res) => {
   res.status(404).json({
@@ -62,7 +79,7 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    // Start cron only after DB is ready
+    
     initializeFeesReminderCron();
 
     app.listen(config.port, () => {
