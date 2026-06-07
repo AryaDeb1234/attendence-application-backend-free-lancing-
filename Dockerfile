@@ -9,7 +9,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# 👇 ADD THIS LINE
+# ADD THIS LINE
 RUN mkdir -p /app/dist/public/temp && chmod -R 777 /app/dist
 
 # Stage 2: Production
@@ -22,6 +22,7 @@ ENV NODE_ENV=production
 # Copy only the essentials from the builder stage
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/frontend_dist ./frontend_dist
 
 # Install ONLY production dependencies
 RUN npm ci --only=production
