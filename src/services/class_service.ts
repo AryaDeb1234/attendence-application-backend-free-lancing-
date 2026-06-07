@@ -28,59 +28,108 @@ const parseTimeToMinutes = (value: string): number => {
     return (hours * 60) + minutes;
 };
 
+// const validateBatchCoreData = async (batchData: {
+//     startTime: string;
+//     endTime: string;
+//     teachers?: Types.ObjectId[];
+//     teacherEmail?: string;
+//     mainClasses: Types.ObjectId[];
+// }): Promise<void> => {
+//     if (parseTimeToMinutes(batchData.startTime) >= parseTimeToMinutes(batchData.endTime)) {
+//         const err = new Error("startTime must be before endTime");
+//         (err as any).status = 400;
+//         throw err;
+//     }
+
+//     // Validate teacher(s): prefer `teachers` array of ids, else `teacherEmail` fallback
+//     if (Array.isArray(batchData.teachers) && batchData.teachers.length > 0) {
+//         const teachersFound = await User.find({ _id: { $in: batchData.teachers }, role: { $in: ["Teacher", "Admin"] } }).select("_id");
+//         if (!teachersFound || teachersFound.length === 0) {
+//             const err = new Error("One or more teachers not found or not Teacher/Admin");
+//             (err as any).status = 400;
+//             throw err;
+//         }
+//     } else {
+//         const teacherEmail = batchData.teacherEmail;
+//         if (!teacherEmail) {
+//             const err = new Error("teachers or teacherEmail is required");
+//             (err as any).status = 400;
+//             throw err;
+//         }
+//         const teacher = await User.findOne({
+//             email: teacherEmail,
+//             role: { $in: ["Teacher", "Admin"] },
+//         }).select("_id");
+//         if (!teacher) {
+//             const err = new Error("Teacher/Admin not found for teacherEmail");
+//             (err as any).status = 400;
+//             throw err;
+//         }
+//     }
+
+//     const mainClassIds = [...new Set(batchData.mainClasses.map((id) => id.toString()))];
+//     if (mainClassIds.length === 0) {
+//         const err = new Error("At least one mainClass is required");
+//         (err as any).status = 400;
+//         throw err;
+//     }
+
+// };
 const validateBatchCoreData = async (batchData: {
     startTime: string;
     endTime: string;
     teachers?: Types.ObjectId[];
     teacherEmail?: string;
-    mainClasses: Types.ObjectId[];
+    mainClasses?: Types.ObjectId[];
 }): Promise<void> => {
-    if (parseTimeToMinutes(batchData.startTime) >= parseTimeToMinutes(batchData.endTime)) {
+    if (
+        parseTimeToMinutes(batchData.startTime) >=
+        parseTimeToMinutes(batchData.endTime)
+    ) {
         const err = new Error("startTime must be before endTime");
         (err as any).status = 400;
         throw err;
     }
 
-    // Validate teacher(s): prefer `teachers` array of ids, else `teacherEmail` fallback
+    // Validate teachers only if provided
     if (Array.isArray(batchData.teachers) && batchData.teachers.length > 0) {
-        const teachersFound = await User.find({ _id: { $in: batchData.teachers }, role: { $in: ["Teacher", "Admin"] } }).select("_id");
-        if (!teachersFound || teachersFound.length === 0) {
-            const err = new Error("One or more teachers not found or not Teacher/Admin");
-            (err as any).status = 400;
-            throw err;
-        }
-    } else {
-        const teacherEmail = batchData.teacherEmail;
-        if (!teacherEmail) {
-            const err = new Error("teachers or teacherEmail is required");
-            (err as any).status = 400;
-            throw err;
-        }
-        const teacher = await User.findOne({
-            email: teacherEmail,
+        const teachersFound = await User.find({
+            _id: { $in: batchData.teachers },
             role: { $in: ["Teacher", "Admin"] },
         }).select("_id");
-        if (!teacher) {
-            const err = new Error("Teacher/Admin not found for teacherEmail");
+
+        if (teachersFound.length !== batchData.teachers.length) {
+            const err = new Error(
+                "One or more teachers not found or not Teacher/Admin"
+            );
             (err as any).status = 400;
             throw err;
         }
     }
 
-    const mainClassIds = [...new Set(batchData.mainClasses.map((id) => id.toString()))];
-    if (mainClassIds.length === 0) {
-        const err = new Error("At least one mainClass is required");
-        (err as any).status = 400;
-        throw err;
-    }
+    // Validate mainClasses only if provided
+    if (Array.isArray(batchData.mainClasses) && batchData.mainClasses.length > 0) {
+        const mainClassIds = [
+            ...new Set(batchData.mainClasses.map((id) => id.toString())),
+        ];
 
+        const mainClassesFound = await MainClass.find({
+            _id: { $in: mainClassIds },
+        }).select("_id");
+
+        if (mainClassesFound.length !== mainClassIds.length) {
+            const err = new Error("One or more mainClasses not found");
+            (err as any).status = 400;
+            throw err;
+        }
+    }
 };
 
 const validatePairAssignments = async (
-    mainClasses: Types.ObjectId[],
-    students: Types.ObjectId[],
-    pairs: IMainClassStudentPair[],
-): Promise<void> => {
+    mainClasses: Types.ObjectId[] = [],
+    students: Types.ObjectId[] = [],
+    pairs: IMainClassStudentPair[] = []
+) => {
     const mainClassIds = [...new Set(mainClasses.map((id) => id.toString()))];
     const studentIds = [...new Set(students.map((id) => id.toString()))];
 
@@ -143,11 +192,12 @@ export const createClass = async (classData: ICreateBatchInput): Promise<IBatch>
     await validateBatchCoreData(classData as any);
 
     const normalizedClassData: IBatch = {
-        ...classData,
-        students: classData.students ?? [],
-        mainClassStudentPairs: classData.mainClassStudentPairs ?? [],
-        teachers: (classData as any).teachers ?? [],
-    };
+    ...classData,
+    teachers: classData.teachers ?? [],
+    mainClasses: classData.mainClasses ?? [],
+    students: classData.students ?? [],
+    mainClassStudentPairs: classData.mainClassStudentPairs ?? [],
+};
 
     await validatePairAssignments(
         normalizedClassData.mainClasses,
@@ -166,17 +216,106 @@ export const createClass = async (classData: ICreateBatchInput): Promise<IBatch>
     return savedClass;
 };
 
-export const deleteClass = async (classId: string): Promise<void> => {
-    const deletedClass = await Batch.findByIdAndDelete(classId);
+// export const deleteClass = async (classId: string): Promise<void> => {
+//     const deletedClass = await Batch.findByIdAndDelete(classId);
+//     if (!deletedClass) {
+//         const err = new Error("Class not found");
+//         (err as any).status = 404;
+//         throw err;
+//     }
+// };
+
+export const deleteClass = async (classId: string): Promise<IBatch> => {
+    const deletedClass = await Batch.findById(classId);
+
     if (!deletedClass) {
         const err = new Error("Class not found");
         (err as any).status = 404;
         throw err;
     }
+
+    const userIds = [
+        ...new Set([
+            ...deletedClass.teachers.map(id => id.toString()),
+            ...deletedClass.students.map(id => id.toString()),
+        ]),
+    ];
+
+    if (userIds.length > 0) {
+        await User.updateMany(
+            { _id: { $in: userIds } },
+            { $pull: { batches: deletedClass._id } }
+        );
+    }
+
+    await MainClass.updateMany(
+        { _id: { $in: deletedClass.mainClasses } },
+        { $pull: { batches: deletedClass._id } }
+    );
+
+    await Batch.findByIdAndDelete(classId);
+
+    return deletedClass;
 };
 
-export const editClass = async (classId: string, updateData: Partial<IBatch>): Promise<IBatch> => {
+// export const editClass = async (classId: string, updateData: Partial<IBatch>): Promise<IBatch> => {
+//     const existingClass = await Batch.findById(classId);
+    
+//     if (!existingClass) {
+//         const err = new Error("Class not found");
+//         (err as any).status = 404;
+//         throw err;
+//     }
+
+//     const payload = updateData as Partial<IBatch> & {
+//         mainClassId?: string;
+//     };
+
+//     let mergedMainClasses = payload.mainClasses ? [...payload.mainClasses] : [...existingClass.mainClasses];
+
+//     if (payload.mainClassId) {
+//         const mainClass = await MainClass.findById(payload.mainClassId).select("_id");
+//         if (!mainClass) {
+//             const err = new Error("Main class not found");
+//             (err as any).status = 404;
+//             throw err;
+//         }
+
+//         const alreadyIncluded = mergedMainClasses.some(
+//             (id) => id.toString() === mainClass._id.toString(),
+//         );
+
+//         if (!alreadyIncluded) {
+//             mergedMainClasses.push(mainClass._id);
+//         }
+//     }
+
+//     const mergedClassData: IBatch = {
+//         name: payload.name ?? existingClass.name,
+//         weekday: payload.weekday ?? existingClass.weekday,
+//         startTime: payload.startTime ?? existingClass.startTime,
+//         endTime: payload.endTime ?? existingClass.endTime,
+//         teachers: payload.teachers ?? existingClass.teachers,
+//         mainClasses: mergedMainClasses,
+//         students: payload.students ?? existingClass.students,
+//         mainClassStudentPairs: payload.mainClassStudentPairs ?? existingClass.mainClassStudentPairs,
+//     };
+
+//     await validateBatchCoreData(mergedClassData);
+//     await validatePairAssignments(
+//         mergedClassData.mainClasses,
+//         mergedClassData.students,
+//         mergedClassData.mainClassStudentPairs,
+//     );
+//     Object.assign(existingClass, payload, { mainClasses: mergedMainClasses });
+//     return await existingClass.save();
+// };
+export const editClass = async (
+    classId: string,
+    updateData: Partial<IBatch>
+): Promise<IBatch> => {
     const existingClass = await Batch.findById(classId);
+
     if (!existingClass) {
         const err = new Error("Class not found");
         (err as any).status = 404;
@@ -187,10 +326,13 @@ export const editClass = async (classId: string, updateData: Partial<IBatch>): P
         mainClassId?: string;
     };
 
-    let mergedMainClasses = payload.mainClasses ? [...payload.mainClasses] : [...existingClass.mainClasses];
+    let mergedMainClasses = payload.mainClasses
+        ? [...payload.mainClasses]
+        : [...existingClass.mainClasses];
 
     if (payload.mainClassId) {
         const mainClass = await MainClass.findById(payload.mainClassId).select("_id");
+
         if (!mainClass) {
             const err = new Error("Main class not found");
             (err as any).status = 404;
@@ -198,7 +340,7 @@ export const editClass = async (classId: string, updateData: Partial<IBatch>): P
         }
 
         const alreadyIncluded = mergedMainClasses.some(
-            (id) => id.toString() === mainClass._id.toString(),
+            (id) => id.toString() === mainClass._id.toString()
         );
 
         if (!alreadyIncluded) {
@@ -214,16 +356,106 @@ export const editClass = async (classId: string, updateData: Partial<IBatch>): P
         teachers: payload.teachers ?? existingClass.teachers,
         mainClasses: mergedMainClasses,
         students: payload.students ?? existingClass.students,
-        mainClassStudentPairs: payload.mainClassStudentPairs ?? existingClass.mainClassStudentPairs,
+        mainClassStudentPairs:
+            payload.mainClassStudentPairs ?? existingClass.mainClassStudentPairs,
     };
 
     await validateBatchCoreData(mergedClassData);
+
     await validatePairAssignments(
         mergedClassData.mainClasses,
         mergedClassData.students,
-        mergedClassData.mainClassStudentPairs,
+        mergedClassData.mainClassStudentPairs
     );
-    Object.assign(existingClass, payload, { mainClasses: mergedMainClasses });
+
+    // -------------------------
+    // Sync User.batches
+    // -------------------------
+
+    const oldTeacherIds = existingClass.teachers.map((id) => id.toString());
+    const newTeacherIds = mergedClassData.teachers.map((id) => id.toString());
+
+    const addedTeachers = newTeacherIds.filter(
+        (id) => !oldTeacherIds.includes(id)
+    );
+
+    const removedTeachers = oldTeacherIds.filter(
+        (id) => !newTeacherIds.includes(id)
+    );
+
+    const oldStudentIds = existingClass.students.map((id) => id.toString());
+    const newStudentIds = mergedClassData.students.map((id) => id.toString());
+
+    const addedStudents = newStudentIds.filter(
+        (id) => !oldStudentIds.includes(id)
+    );
+
+    const removedStudents = oldStudentIds.filter(
+        (id) => !newStudentIds.includes(id)
+    );
+
+    if (addedTeachers.length) {
+        await User.updateMany(
+            { _id: { $in: addedTeachers } },
+            { $addToSet: { batches: existingClass._id } }
+        );
+    }
+
+    if (removedTeachers.length) {
+        await User.updateMany(
+            { _id: { $in: removedTeachers } },
+            { $pull: { batches: existingClass._id } }
+        );
+    }
+
+    if (addedStudents.length) {
+        await User.updateMany(
+            { _id: { $in: addedStudents } },
+            { $addToSet: { batches: existingClass._id } }
+        );
+    }
+
+    if (removedStudents.length) {
+        await User.updateMany(
+            { _id: { $in: removedStudents } },
+            { $pull: { batches: existingClass._id } }
+        );
+    }
+
+    // -------------------------
+// Sync MainClass.batches
+// -------------------------
+
+const oldMainClassIds = existingClass.mainClasses.map((id) => id.toString());
+
+const newMainClassIds = mergedMainClasses.map((id) => id.toString());
+
+const addedMainClasses = newMainClassIds.filter(
+    (id) => !oldMainClassIds.includes(id)
+);
+
+const removedMainClasses = oldMainClassIds.filter(
+    (id) => !newMainClassIds.includes(id)
+);
+
+if (addedMainClasses.length) {
+    await MainClass.updateMany(
+        { _id: { $in: addedMainClasses } },
+        { $addToSet: { batches: existingClass._id } }
+    );
+}
+
+if (removedMainClasses.length) {
+    await MainClass.updateMany(
+        { _id: { $in: removedMainClasses } },
+        { $pull: { batches: existingClass._id } }
+    );
+}
+
+    Object.assign(existingClass, payload, {
+        mainClasses: mergedMainClasses,
+    });
+
     return await existingClass.save();
 };
 

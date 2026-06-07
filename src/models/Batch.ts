@@ -64,8 +64,8 @@ const batchSchema = new mongoose.Schema<IBatch>(
         message: "endTime must be in HH:mm format",
       },
     },
-    teachers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
-    mainClasses: [{ type: mongoose.Schema.Types.ObjectId, ref: "MainClass", required: true }],
+    teachers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', default: [] }],
+    mainClasses: [{ type: mongoose.Schema.Types.ObjectId, ref: "MainClass", default: [] }],
     students: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", default: [] }],
     mainClassStudentPairs: {
       type: [pairSchema],
