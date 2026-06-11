@@ -159,17 +159,33 @@ const validatePairAssignments = async (
         const mainClassId = pair.mainClass.toString();
         const studentId = pair.student.toString();
 
-        if (!mainClassIds.includes(mainClassId)) {
-            const err = new Error(`mainClass ${mainClassId} from pair is not part of batch mainClasses`);
-            (err as any).status = 400;
-            throw err;
-        }
+ if (!mainClassIds.includes(mainClassId)) {
+    const mainClassDoc = await MainClass.findById(mainClassId).select("name");
+
+    const studentDoc = validStudents.find(
+        (doc) => doc._id.toString() === studentId
+    );
+
+    const err = new Error(
+        `Cannot remove "${mainClassDoc?.name ?? mainClassId}" because ${formatStudentLabel(studentDoc)} is assigned to this course in the batch. Remove the student from the batch first.`
+    );
+
+    (err as any).status = 400;
+    throw err;
+}
 
         if (!studentIds.includes(studentId)) {
-            const err = new Error(`student ${studentId} from pair is not part of batch students`);
-            (err as any).status = 400;
-            throw err;
-        }
+    const studentDoc = validStudents.find(
+        (doc) => doc._id.toString() === studentId
+    );
+
+    const err = new Error(
+       `${formatStudentLabel(studentDoc)} is still assigned to a course in this batch.`
+    );
+
+    (err as any).status = 400;
+    throw err;
+}
 
         const mainClass = mainClassMap.get(mainClassId);
         const isStudentInMainClass = mainClass?.students.some(
