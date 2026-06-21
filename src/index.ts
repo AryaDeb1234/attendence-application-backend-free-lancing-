@@ -22,7 +22,8 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    "https://institute-of-knowledge.vercel.app"
+    "https://institute-of-knowledge.vercel.app",
+    "https://www.instituteofknowledge.in"
   ],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
