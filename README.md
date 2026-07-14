@@ -75,6 +75,7 @@ or
 ### Fees
 - [GET /fees/details/:mainClassId/:studentId](#route-fees-details)
 - [POST /fees/pay/:mainClassId/:studentId](#route-fees-pay)
+- [PATCH /fees/undo/:feesId](#route-fees-undo)
 - [PATCH /fees/edit/:feesId](#route-fees-edit)
 - [GET /fees/history/:mainClassId/:studentId](#route-fees-history)
 
@@ -699,6 +700,55 @@ Request:
 	"PaidAt": "2026-06-26"
 }
 ```
+
+<a id="route-fees-undo"></a>
+### PATCH `/fees/undo/:feesId` (Admin/Teacher)
+What it does:
+- Reverts a payment by clearing `PaidAt` on the selected fee record.
+- Keeps the fee document, month, student, class, base amount, and total amount intact.
+- Makes the record behave like an unpaid fee again in the fees history and fees details screens.
+- Is meant for cases where a payment was marked by mistake and needs to be rolled back.
+
+Frontend input:
+- `feesId` in the URL path: the MongoDB id of the exact fee record to undo.
+- Authorization header with the logged-in user token.
+- No request body is required.
+
+Example request:
+```http
+PATCH /fees/undo/66c2bb5d8932def09e153445
+Authorization: Bearer <JWT_TOKEN>
+```
+
+When to use:
+- A teacher or admin accidentally marked the wrong fee as paid.
+- You need to cancel a payment without deleting the fee record.
+
+Expected success response:
+```json
+{
+	"message": "Fees payment undone successfully",
+	"fees": {
+		"_id": "66c2bb5d8932def09e153445",
+		"mainClass": "69c2bb5d8932def09e153224",
+		"student": "699346212530ac75eb40fd3d",
+		"month": "June 2026",
+		"baseamount": 1000,
+		"totalAmount": 1000
+	}
+}
+```
+
+What the frontend should expect after success:
+- `PaidAt` is removed from the returned fee record.
+- The payment should no longer count as paid in the fees summary logic.
+- The UI should refresh the fee history/details data so the change is visible immediately.
+
+Possible errors:
+- `403` if the user is not Admin or Teacher.
+- `400` if `feesId` is not a valid MongoDB ObjectId.
+- `404` if the fee record does not exist.
+- `500` for unexpected server errors.
 
 <a id="route-fees-edit"></a>
 ### PATCH `/fees/edit/:feesId` (Admin)

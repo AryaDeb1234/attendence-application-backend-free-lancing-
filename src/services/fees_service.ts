@@ -21,6 +21,10 @@ interface UpdateFeesInput {
     paidAt?: Date;
 }
 
+interface UndoFeesPaymentInput {
+    feesId: string;
+}
+
 const getMonthString = (date: Date): string => {
     const months = ["January", "February", "March", "April", "May", "June",
                     "July", "August", "September", "October", "November", "December"];
@@ -377,4 +381,30 @@ export const updateFeesById = async (feesId: string, input: UpdateFeesInput): Pr
 
     await fees.save();
     return fees;
+};
+
+export const undoFeesPaymentById = async ({ feesId }: UndoFeesPaymentInput): Promise<IFees> => {
+    if (!mongoose.Types.ObjectId.isValid(feesId)) {
+        const err = new Error("Invalid fees id");
+        (err as any).status = 400;
+        throw err;
+    }
+
+    const updatedFees = await Fees.findByIdAndUpdate(
+        feesId,
+        {
+            $unset: { PaidAt: 1 },
+        },
+        {
+            new: true,
+        },
+    );
+
+    if (!updatedFees) {
+        const err = new Error("Fees record not found");
+        (err as any).status = 404;
+        throw err;
+    }
+
+    return updatedFees;
 };

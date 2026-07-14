@@ -137,6 +137,28 @@ export const editFeesById = async (req: Request, res: Response) => {
     }
 };
 
+export const undoFeesPaymentById = async (req: Request, res: Response) => {
+    try {
+        if (!req.user || (req.user.role !== "Admin" && req.user.role !== "Teacher")) {
+            return res.status(403).json({ message: "Access denied. Admin or Teacher privileges required." });
+        }
+
+        const feesId = req.params.feesId;
+        const updatedFees = await feesService.undoFeesPaymentById({ feesId });
+
+        return res.status(200).json({
+            message: "Fees payment undone successfully",
+            fees: updatedFees,
+        });
+    } catch (error) {
+        const status = (error as any)?.status || 500;
+        return res.status(status).json({
+            message: status === 404 ? (error as Error).message : status === 400 ? (error as Error).message : "Error undoing fees payment",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+};
+
 export const triggerFeesReminder = async (req: Request, res: Response) => {
     try {
         // Only allow Admin to trigger manual fee reminders
